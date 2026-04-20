@@ -45,6 +45,7 @@ jobs:
             fi
             output="bubbler-${os}-${arch}${ext}"
             CGO_ENABLED=0 GOOS="$os" GOARCH="$arch" go build -ldflags="-s -w" -o "dist/$output" ./cmd/bubbler
+            chmod +x "dist/$output"
             echo "Built: dist/$output"
           done
 
