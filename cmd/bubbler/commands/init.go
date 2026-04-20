@@ -18,9 +18,9 @@ type board struct {
 }
 
 type boardMeta struct {
-	Name    string    `yaml:"name"`
-	Columns []column  `yaml:"columns"`
-	Tags    []string  `yaml:"tags"`
+	Name    string   `yaml:"name"`
+	Columns []column `yaml:"columns"`
+	Tags    []string `yaml:"tags"`
 }
 
 type column struct {

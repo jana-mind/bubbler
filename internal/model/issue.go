@@ -9,13 +9,13 @@ import (
 )
 
 type IssueFile struct {
-	ID          string        `yaml:"id"`
-	Title       string        `yaml:"title"`
-	Column      string        `yaml:"column"`
-	Tags        []string      `yaml:"tags"`
-	Description string        `yaml:"description"`
-	CreatedAt   time.Time     `yaml:"created_at"`
-	CreatedBy   Identity      `yaml:"created_by"`
+	ID          string         `yaml:"id"`
+	Title       string         `yaml:"title"`
+	Column      string         `yaml:"column"`
+	Tags        []string       `yaml:"tags"`
+	Description string         `yaml:"description"`
+	CreatedAt   time.Time      `yaml:"created_at"`
+	CreatedBy   Identity       `yaml:"created_by"`
 	History     []HistoryEntry `yaml:"history"`
 }
 
@@ -33,9 +33,9 @@ func (f IssueFile) Validate(board Board) error {
 }
 
 type issueHistoryEntry struct {
-	Type string        `yaml:"type"`
-	At   time.Time     `yaml:"at"`
-	By   Identity      `yaml:"by"`
+	Type string         `yaml:"type"`
+	At   time.Time      `yaml:"at"`
+	By   Identity       `yaml:"by"`
 	Data map[string]any `yaml:"data"`
 }
 

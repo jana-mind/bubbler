@@ -21,7 +21,7 @@ type IssueSummary struct {
 }
 
 type BoardFile struct {
-	Board  Board         `yaml:"board"`
+	Board  Board          `yaml:"board"`
 	Issues []IssueSummary `yaml:"issues"`
 }
 
