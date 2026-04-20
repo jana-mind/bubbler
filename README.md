@@ -2,6 +2,171 @@
 
 A kanban board for your terminal, living inside your git repo.
 
+## Installation
+
+### go install
+
+Install the latest version directly:
+
+```
+go install github.com/jana-mind/bubbler@latest
+```
+
+### GitHub Releases
+
+Pre-built binaries for Linux, macOS, and Windows are available on the [Releases page](https://github.com/jana-mind/bubbler/releases). Download the archive for your platform, extract it, and add the binary to your PATH.
+
+## Setup
+
+Initialize bubbler in an existing git repository:
+
+```
+cd your-project
+bubbler init
+```
+
+This creates `.bubble/` containing `default.yaml` and a `default/` directory for issue files.
+
+### Using .bubble as a git submodule
+
+If you want bubbler to automatically commit and push board changes alongside your project:
+
+```
+git submodule add https://github.com/jana-mind/bubbler.git .bubble
+```
+
+After cloning a repo that has `.bubble` as a submodule:
+
+```
+git submodule update --init
+```
+
+To update bubbler to the latest version when using it as a submodule:
+
+```
+cd .bubble && git pull && cd .. && git add .bubble && git commit -m "Update bubbler"
+```
+
+## Core Commands
+
+### Creating an issue
+
+Interactive mode, prompts for title and opens your editor for description:
+
+```
+bubbler issue create
+```
+
+With flags to skip the prompts:
+
+```
+bubbler issue create --title "Fix login timeout" --tag bug --tag urgent
+```
+
+### Listing issues
+
+Show all open issues across columns:
+
+```
+bubbler issue list
+```
+
+Show completed issues too:
+
+```
+bubbler issue list --all
+```
+
+Filter by column:
+
+```
+bubbler issue list --column in-progress
+```
+
+Filter by tag (repeatable, AND logic):
+
+```
+bubbler issue list --tag bug --tag urgent
+```
+
+### Moving an issue
+
+```
+bubbler issue move a1b2c3 in-progress
+```
+
+### Commenting on an issue
+
+With a message flag:
+
+```
+bubbler issue comment a1b2c3 --message "This is reproduced on Safari 17"
+```
+
+Without flags, opens your editor:
+
+```
+bubbler issue comment a1b2c3
+```
+
+### Full issue detail
+
+```
+bubbler issue show a1b2c3
+```
+
+### Board management
+
+List columns:
+
+```
+bubbler board columns
+```
+
+Add or remove columns:
+
+```
+bubbler board column add "In Review"
+bubbler board column remove "In Review"
+```
+
+List, add, and remove tags:
+
+```
+bubbler board tags
+bubbler board tag add docs
+bubbler board tag remove chore
+```
+
+## Shell Completion
+
+### bash
+
+```
+# Add to ~/.bashrc
+source <(bubbler completion bash)
+```
+
+Or install system-wide:
+
+```
+sudo cp $(bubbler completion bash) /etc/bash_completion.d/bubbler
+```
+
+### zsh
+
+```
+# Add to ~/.zshrc
+source <(bubbler completion zsh)
+```
+
+### PowerShell
+
+```
+bubbler completion powershell > bubbler.ps1
+Import-Module ./bubbler.ps1
+```
+
 ## How it works
 
 Your board lives in a `.bubble` directory at the repo root — two kinds of files: one for the overall board state (issues, titles, tags, which column everything is in), and one per issue for everything else: description, comments, column changes, the full history. Nothing ever gets overwritten. Every change is appended, and attributed to whoever made it using the local git identity (`user.name` + `user.email`).
