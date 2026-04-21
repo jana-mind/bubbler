@@ -409,4 +409,85 @@ func TestParseDescription(t *testing.T) {
 	})
 }
 
+func TestMatchTags(t *testing.T) {
+	tags := []string{"bug", "feature", "docs", "chore", "urgent"}
+
+	t.Run("empty input returns all tags", func(t *testing.T) {
+		matches := matchTags("", tags)
+		if len(matches) != len(tags) {
+			t.Errorf("expected %d matches, got %d", len(tags), len(matches))
+		}
+	})
+
+	t.Run("prefix match", func(t *testing.T) {
+		matches := matchTags("bu", tags)
+		if len(matches) != 1 || matches[0] != "bug" {
+			t.Errorf("expected [bug], got %v", matches)
+		}
+	})
+
+	t.Run("no match", func(t *testing.T) {
+		matches := matchTags("xyz", tags)
+		if len(matches) != 0 {
+			t.Errorf("expected [], got %v", matches)
+		}
+	})
+
+	t.Run("case sensitive", func(t *testing.T) {
+		matches := matchTags("BU", tags)
+		if len(matches) != 0 {
+			t.Errorf("expected [], got %v", matches)
+		}
+	})
+}
+
+func TestTabCompletion(t *testing.T) {
+	t.Run("TabPressed in filter view activates completion", func(t *testing.T) {
+		store := &mockStore{}
+		m := initialModel("default", store)
+		m.view = viewFilter
+		m.board = model.BoardFile{
+			Board: model.Board{
+				Tags: []string{"bug", "feature", "chore"},
+			},
+		}
+
+		result, _ := m.Update(TabPressed{})
+		m = result.(Model)
+		if !m.completion.active {
+			t.Error("expected completion.active to be true")
+		}
+		if len(m.completion.matches) != 3 {
+			t.Errorf("expected 3 matches, got %d", len(m.completion.matches))
+		}
+		if m.completion.index != 0 {
+			t.Errorf("expected index 0, got %d", m.completion.index)
+		}
+	})
+
+	t.Run("TabPressed outside filter view does nothing", func(t *testing.T) {
+		store := &mockStore{}
+		m := initialModel("default", store)
+		m.view = viewBoard
+
+		result, _ := m.Update(TabPressed{})
+		m = result.(Model)
+		if m.completion.active {
+			t.Error("expected completion.active to be false")
+		}
+	})
+
+	t.Run("TabCompletionResult deactivates completion", func(t *testing.T) {
+		store := &mockStore{}
+		m := initialModel("default", store)
+		m.completion.active = true
+
+		result, _ := m.Update(TabCompletionResult{})
+		m = result.(Model)
+		if m.completion.active {
+			t.Error("expected completion.active to be false")
+		}
+	})
+}
+
 var _ = errTest // suppress unused warning

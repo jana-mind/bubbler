@@ -42,6 +42,9 @@ type WriteRetryRequested struct{}
 type WriteCancelled struct{}
 type QuitConfirmed struct{}
 
+type TabPressed struct{}
+type TabCompletionResult struct{ Text string }
+
 var _ tea.Msg = (BoardLoaded{})
 var _ tea.Msg = (BoardLoadFailed{})
 var _ tea.Msg = (IssueFocused{})

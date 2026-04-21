@@ -52,10 +52,10 @@ func TestMockStore(t *testing.T) {
 }
 
 type errorStore struct {
-	loadBoardErr  error
-	loadIssueErr  error
-	saveBoardErr  error
-	saveIssueErr  error
+	loadBoardErr   error
+	loadIssueErr   error
+	saveBoardErr   error
+	saveIssueErr   error
 	deleteIssueErr error
 }
 

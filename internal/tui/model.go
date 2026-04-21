@@ -2,6 +2,7 @@ package tui
 
 import (
 	"errors"
+	"strings"
 
 	"charm.land/bubbletea/v2"
 
@@ -23,6 +24,14 @@ const (
 
 type modalState struct {
 	confirmDelete bool
+}
+
+type completionState struct {
+	active  bool
+	matches []string
+	index   int
+	input   string
+	target  string
 }
 
 type pendingWriteOp interface{}
@@ -50,6 +59,7 @@ type Model struct {
 	detailIssueID string
 
 	modal           modalState
+	completion      completionState
 	formTitle       string
 	formColumn      int
 	formTags        []string
@@ -258,6 +268,20 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case QuitConfirmed:
 		return m, tea.Quit
 
+	case TabPressed:
+		if m.view == viewFilter {
+			m.completion.active = true
+			m.completion.matches = matchTags(m.tagFilter, m.board.Board.Tags)
+			m.completion.index = 0
+			m.completion.input = m.tagFilter
+			m.completion.target = "filter"
+		}
+		return m, nil
+
+	case TabCompletionResult:
+		m.completion.active = false
+		return m, nil
+
 	default:
 		return m, nil
 	}
@@ -279,6 +303,19 @@ func parseDescription(desc string) []string {
 		lines = append(lines, desc[start:])
 	}
 	return lines
+}
+
+func matchTags(input string, available []string) []string {
+	if input == "" {
+		return available
+	}
+	var matches []string
+	for _, tag := range available {
+		if strings.HasPrefix(tag, input) {
+			matches = append(matches, tag)
+		}
+	}
+	return matches
 }
 
 func (m Model) View() tea.View {
