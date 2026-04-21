@@ -25,6 +25,19 @@ type modalState struct {
 	confirmDelete bool
 }
 
+type pendingWriteOp interface{}
+
+type pendingIssueSave struct {
+	boardName string
+	issue     model.IssueFile
+	entries   []model.HistoryEntry
+}
+
+type pendingIssueDelete struct {
+	boardName string
+	issueID   string
+}
+
 type Model struct {
 	boardName string
 	board     model.BoardFile
@@ -45,9 +58,10 @@ type Model struct {
 
 	tagFilter string
 
-	loading  bool
-	writing  bool
-	writeErr error
+	loading      bool
+	writing      bool
+	writeErr     error
+	pendingWrite pendingWriteOp
 
 	width  int
 	height int
@@ -163,7 +177,10 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return m, nil
 
 	case ConfirmDeleteConfirmed:
-		return m, nil
+		m.modal.confirmDelete = false
+		m.writing = true
+		m.pendingWrite = pendingIssueDelete{boardName: m.boardName, issueID: m.detailIssueID}
+		return m, cmdDeleteIssue(m.boardName, m.detailIssueID, m.store)
 
 	case ConfirmDeleteCancelled:
 		m.modal.confirmDelete = false
@@ -194,10 +211,40 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	case WriteCompleted:
 		m.writing = false
+		switch op := m.pendingWrite.(type) {
+		case pendingIssueDelete:
+			if t.Err == nil {
+				delete(m.issues, op.issueID)
+				m.detailIssueID = ""
+				m.view = viewBoard
+				board, err := m.store.LoadBoard(m.boardName)
+				if err == nil {
+					m.board = board
+				}
+			}
+		case pendingIssueSave:
+			if t.Err == nil {
+				board, err := m.store.LoadBoard(m.boardName)
+				if err == nil {
+					m.board = board
+				}
+			}
+		}
 		m.writeErr = t.Err
+		m.pendingWrite = nil
 		return m, nil
 
 	case WriteRetryRequested:
+		if m.pendingWrite == nil {
+			return m, nil
+		}
+		m.writing = true
+		switch op := m.pendingWrite.(type) {
+		case pendingIssueDelete:
+			return m, cmdDeleteIssue(op.boardName, op.issueID, m.store)
+		case pendingIssueSave:
+			return m, cmdSaveIssue(op.boardName, op.issue, op.entries, m.store)
+		}
 		return m, nil
 
 	case WriteCancelled:
