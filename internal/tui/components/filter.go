@@ -7,9 +7,9 @@ import (
 )
 
 var (
-	filterFieldStyle   = lipgloss.NewStyle()
-	filterHintStyle    = lipgloss.NewStyle()
-	filterMatchStyle   = lipgloss.NewStyle().Bold(true)
+	filterFieldStyle    = lipgloss.NewStyle()
+	filterHintStyle     = lipgloss.NewStyle()
+	filterMatchStyle    = lipgloss.NewStyle().Bold(true)
 	filterSelectedStyle = lipgloss.NewStyle()
 )
 

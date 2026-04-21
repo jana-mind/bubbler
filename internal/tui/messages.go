@@ -45,6 +45,10 @@ type QuitConfirmed struct{}
 type TabPressed struct{}
 type TabCompletionResult struct{ Text string }
 
+type CreateSubmit struct{}
+type MoveSubmit struct{}
+type EditSave struct{}
+
 var _ tea.Msg = (BoardLoaded{})
 var _ tea.Msg = (BoardLoadFailed{})
 var _ tea.Msg = (IssueFocused{})
@@ -68,3 +72,8 @@ var _ tea.Msg = (WriteCompleted{})
 var _ tea.Msg = (WriteRetryRequested{})
 var _ tea.Msg = (WriteCancelled{})
 var _ tea.Msg = (QuitConfirmed{})
+var _ tea.Msg = (TabPressed{})
+var _ tea.Msg = (TabCompletionResult{})
+var _ tea.Msg = (CreateSubmit{})
+var _ tea.Msg = (MoveSubmit{})
+var _ tea.Msg = (EditSave{})

@@ -20,7 +20,7 @@ type MainViewModel struct {
 	BoardName     string
 	Width         int
 	Height        int
-	Completion   CompletionViewModel
+	Completion    CompletionViewModel
 }
 
 type CompletionViewModel struct {
@@ -78,7 +78,7 @@ func RenderView(m MainViewModel) string {
 			FormTitle:     m.FormTitle,
 			FormDescLines: m.FormDescLines,
 			FormTags:      m.FormTags,
-			Completion:   m.Completion,
+			Completion:    m.Completion,
 		})
 	case 5:
 		return RenderFilter(TUIFilterModel{

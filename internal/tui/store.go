@@ -15,6 +15,7 @@ type Store interface {
 	LoadIssue(boardName, issueID string) (model.IssueFile, error)
 	SaveIssue(boardName string, issue model.IssueFile, entries []model.HistoryEntry) error
 	DeleteIssue(boardName, issueID string) error
+	RepoRoot() string
 }
 
 type realStore struct {
@@ -27,6 +28,10 @@ func newRealStore() (*realStore, error) {
 		return nil, err
 	}
 	return &realStore{repoRoot: root}, nil
+}
+
+func (s *realStore) RepoRoot() string {
+	return s.repoRoot
 }
 
 func (s *realStore) boardPath(boardName string) string {
@@ -73,6 +78,10 @@ func (s *realStore) DeleteIssue(boardName, issueID string) error {
 }
 
 type mockStore struct{}
+
+func (m *mockStore) RepoRoot() string {
+	return ""
+}
 
 func (m *mockStore) LoadBoard(boardName string) (model.BoardFile, error) {
 	return model.BoardFile{}, nil
