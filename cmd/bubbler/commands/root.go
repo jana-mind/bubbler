@@ -29,4 +29,5 @@ func init() {
 	rootCmd.AddCommand(newIssueCmd())
 	rootCmd.AddCommand(newBoardCmd())
 	rootCmd.AddCommand(newCompletionCmd())
+	rootCmd.AddCommand(newTuiCmd())
 }

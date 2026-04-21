@@ -2,6 +2,7 @@ package store
 
 import (
 	"fmt"
+	"os"
 	"path/filepath"
 
 	"github.com/jana-mind/bubbler/internal/git"
@@ -87,6 +88,26 @@ func SaveIssueFileSubmodule(path string, issue model.IssueFile, entries []model.
 		if err := git.CommitAndPush(repoRoot, bubblePath, commitMessageForIssue(issue.ID)); err != nil {
 			return fmt.Errorf("submodule commit/push: %w", err)
 		}
+	}
+	return nil
+}
+
+func DeleteIssueFile(issuePath, boardPath string, issueID string) error {
+	if err := os.Remove(issuePath); err != nil {
+		return fmt.Errorf("remove issue file: %w", err)
+	}
+	bf, err := LoadBoardFile(boardPath)
+	if err != nil {
+		return fmt.Errorf("load board file: %w", err)
+	}
+	for i, issue := range bf.Issues {
+		if issue.ID == issueID {
+			bf.Issues = append(bf.Issues[:i], bf.Issues[i+1:]...)
+			break
+		}
+	}
+	if err := SaveBoardFile(boardPath, bf); err != nil {
+		return fmt.Errorf("save board file: %w", err)
 	}
 	return nil
 }
