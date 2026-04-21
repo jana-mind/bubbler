@@ -284,7 +284,9 @@ func parseDescription(desc string) []string {
 }
 
 func (m Model) View() tea.View {
-	return tea.NewView(renderView(m))
+	v := tea.NewView(renderView(m))
+	v.AltScreen = true
+	return v
 }
 
 func renderView(m Model) string {
