@@ -6,6 +6,8 @@ import (
 
 	"charm.land/bubbletea/v2"
 
+	"github.com/jana-mind/bubbler/internal/tui/components"
+
 	"github.com/jana-mind/bubbler/internal/git"
 	"github.com/jana-mind/bubbler/internal/model"
 )
@@ -296,9 +298,13 @@ func renderView(m Model) string {
 	}
 	switch m.view {
 	case viewBoard:
-		return renderBoard(m)
+		return renderBoard(m) + "\n" + components.RenderStatusbar(m.boardName, len(m.board.Issues), m.tagFilter)
 	case viewDetail:
-		return renderDetail(m)
+		dm := components.TUIDetailModel{Board: m.board, Issues: m.issues, DetailIssueID: m.detailIssueID}
+		if m.modal.confirmDelete {
+			return components.RenderDetail(dm) + "\n" + components.RenderConfirm(m.detailIssueID)
+		}
+		return components.RenderDetail(dm)
 	case viewCreate:
 		return renderCreate(m)
 	case viewMove:
