@@ -120,6 +120,7 @@ func newCreateCmd() *cobra.Command {
 	createCmd := &cobra.Command{
 		Use:   "create",
 		Short: "Create a new issue",
+		Args:  cobra.NoArgs,
 		RunE:  func(cmd *cobra.Command, args []string) error { return runCreate(cmd, &opts) },
 	}
 	createCmd.Flags().StringVarP(&opts.title, "title", "t", "", "Issue title")
