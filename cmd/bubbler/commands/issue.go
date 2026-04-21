@@ -576,9 +576,9 @@ func runEdit(cmd *cobra.Command, issueID, newTitle, newDesc string) error {
 
 func newMoveCmd() *cobra.Command {
 	moveCmd := &cobra.Command{
-		Use:               "move <id> <column>",
+		Use:               "move <id> [column]",
 		Short:             "Move an issue to a different column",
-		Args:              cobra.ExactArgs(2),
+		Args:              cobra.RangeArgs(1, 2),
 		RunE:              runMove,
 		ValidArgsFunction: issueIDCompletion,
 	}
@@ -592,13 +592,22 @@ func runMove(cmd *cobra.Command, args []string) error {
 	}
 
 	issueID := args[0]
-	targetCol := args[1]
 
 	boardPath := filepath.Join(repoRoot, ".bubble", "default.yaml")
 	board, err := store.LoadBoardFileSubmodule(boardPath)
 	if err != nil {
 		return fmt.Errorf("load board: %w", err)
 	}
+
+	if len(args) == 1 {
+		var cols []string
+		for _, c := range board.Board.Columns {
+			cols = append(cols, c.ID)
+		}
+		return fmt.Errorf("you need to define a column; available columns are: %s", strings.Join(cols, ", "))
+	}
+
+	targetCol := args[1]
 
 	if !board.Board.HasColumn(targetCol) {
 		return fmt.Errorf("%w: %q", errNoSuchColumn, targetCol)
