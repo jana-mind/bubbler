@@ -9,8 +9,7 @@ import (
 
 var (
 	colHeadStyle    = lipgloss.NewStyle().Bold(true)
-	selectedPrefix  = lipgloss.NewStyle().Foreground(lipgloss.Color("13"))
-	narrowTermStyle = lipgloss.NewStyle().Foreground(lipgloss.Color("9"))
+	narrowTermStyle = lipgloss.NewStyle()
 )
 
 func RenderBoard(m TUIViewModel, width int) string {
@@ -70,7 +69,7 @@ func RenderBoard(m TUIViewModel, width int) string {
 				issue := issues[row]
 				prefix := " "
 				if colIdx == m.FocusedColumn && row == m.FocusedIssue {
-					prefix = selectedPrefix.Render(">")
+					prefix = ">"
 				}
 				id := issue.ID
 				if len(id) > 6 {

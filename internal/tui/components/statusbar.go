@@ -8,7 +8,7 @@ import (
 )
 
 var (
-	statusbarStyle = lipgloss.NewStyle().Foreground(lipgloss.Color("245")).MarginTop(1)
+	statusbarStyle = lipgloss.NewStyle().MarginTop(1)
 )
 
 func RenderStatusbar(boardName string, issueCount int, tagFilter string) string {

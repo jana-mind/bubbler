@@ -7,9 +7,9 @@ import (
 )
 
 var (
-	createLabelStyle = lipgloss.NewStyle().Foreground(lipgloss.Color("245"))
-	createFieldStyle = lipgloss.NewStyle().Foreground(lipgloss.Color("13"))
-	createHintStyle  = lipgloss.NewStyle().Foreground(lipgloss.Color("245"))
+	createLabelStyle = lipgloss.NewStyle()
+	createFieldStyle = lipgloss.NewStyle()
+	createHintStyle  = lipgloss.NewStyle()
 )
 
 func RenderCreate(m TUICreateModel) string {

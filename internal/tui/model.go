@@ -2,14 +2,12 @@ package tui
 
 import (
 	"errors"
-	"strings"
 
 	"charm.land/bubbletea/v2"
 
-	"github.com/jana-mind/bubbler/internal/tui/components"
-
 	"github.com/jana-mind/bubbler/internal/git"
 	"github.com/jana-mind/bubbler/internal/model"
+	"github.com/jana-mind/bubbler/internal/tui/components"
 )
 
 type viewState int
@@ -284,38 +282,27 @@ func parseDescription(desc string) []string {
 }
 
 func (m Model) View() tea.View {
-	v := tea.NewView(renderView(m))
+	v := tea.NewView(components.RenderView(components.MainViewModel{
+		ViewState:     int(m.view),
+		Board:         m.board,
+		Issues:        m.issues,
+		FocusedColumn: m.focusedColumn,
+		FocusedIssue:  m.focusedIssue,
+		DetailIssueID: m.detailIssueID,
+		ConfirmDelete: m.modal.confirmDelete,
+		FormTitle:     m.formTitle,
+		FormColumn:    m.formColumn,
+		FormTags:      m.formTags,
+		FormDescLines: m.formDescLines,
+		TagFilter:     m.tagFilter,
+		WriteErr:      m.writeErr,
+		Loading:       m.loading,
+		BoardName:     m.boardName,
+		Width:         m.width,
+		Height:        m.height,
+	}))
 	v.AltScreen = true
 	return v
-}
-
-func renderView(m Model) string {
-	if m.loading {
-		return "Loading...\n"
-	}
-	if m.boardName == "" {
-		return "No board found. Run `bubbler init` first.\nPress any key to exit.\n"
-	}
-	switch m.view {
-	case viewBoard:
-		return renderBoard(m) + "\n" + components.RenderStatusbar(m.boardName, len(m.board.Issues), m.tagFilter)
-	case viewDetail:
-		dm := components.TUIDetailModel{Board: m.board, Issues: m.issues, DetailIssueID: m.detailIssueID}
-		if m.modal.confirmDelete {
-			return components.RenderDetail(dm) + "\n" + components.RenderConfirm(m.detailIssueID)
-		}
-		return components.RenderDetail(dm)
-	case viewCreate:
-		return renderCreate(m)
-	case viewMove:
-		return renderMove(m)
-	case viewEdit:
-		return renderEdit(m)
-	case viewFilter:
-		return renderFilter(m)
-	default:
-		return "Unknown view\n"
-	}
 }
 
 func Run(boardName string) error {
@@ -329,266 +316,4 @@ func Run(boardName string) error {
 	)
 	_, err = program.Run()
 	return err
-}
-
-func renderBoard(m Model) string {
-	if m.width < 60 {
-		return "Terminal must be at least 60 columns wide. Resize and try again.\n"
-	}
-
-	columns := m.board.Board.Columns
-	if len(columns) == 0 {
-		return "No columns defined. Run `bubbler board column add` first.\n"
-	}
-
-	colWidth := m.width / len(columns)
-	if colWidth < 20 {
-		colWidth = 20
-	}
-
-	var b strings.Builder
-
-	for colIdx, col := range columns {
-		b.WriteString("+--[ ")
-		b.WriteString(col.Label)
-		b.WriteString(" ]")
-		remaining := colWidth - len(col.Label) - 7
-		if remaining > 0 {
-			b.WriteString(strings.Repeat("-", remaining))
-		}
-		if colIdx < len(columns)-1 {
-			b.WriteString("-+--")
-		}
-	}
-	b.WriteString("+\n")
-
-	colIssues := make([][]model.IssueSummary, len(columns))
-	for _, issue := range m.board.Issues {
-		for idx, col := range columns {
-			if issue.Column == col.ID {
-				if idx < len(colIssues) {
-					colIssues[idx] = append(colIssues[idx], issue)
-				}
-				break
-			}
-		}
-	}
-
-	maxRows := 0
-	for _, issues := range colIssues {
-		if len(issues) > maxRows {
-			maxRows = len(issues)
-		}
-	}
-
-	for row := 0; row < maxRows; row++ {
-		for colIdx, issues := range colIssues {
-			b.WriteString("| ")
-			if row < len(issues) {
-				issue := issues[row]
-				prefix := " "
-				if colIdx == m.focusedColumn && row == m.focusedIssue {
-					prefix = ">"
-				}
-				id := issue.ID
-				if len(id) > 6 {
-					id = id[:6]
-				}
-				title := issue.Title
-				if len(title) > colWidth-10 {
-					title = title[:colWidth-13] + "..."
-				}
-				b.WriteString(prefix)
-				b.WriteString(id)
-				b.WriteString(" ")
-				b.WriteString(title)
-				remaining := colWidth - len(prefix) - len(id) - 1 - len(title) - 1
-				if remaining > 0 {
-					b.WriteString(strings.Repeat(" ", remaining))
-				}
-			} else {
-				b.WriteString(strings.Repeat(" ", colWidth-2))
-			}
-			if colIdx < len(colIssues)-1 {
-				b.WriteString(" |")
-			}
-		}
-		b.WriteString(" |\n")
-	}
-
-	for colIdx := range columns {
-		b.WriteString("+")
-		b.WriteString(strings.Repeat("-", colWidth))
-		if colIdx < len(columns)-1 {
-			b.WriteString("-+")
-		}
-	}
-	b.WriteString("+\n")
-
-	b.WriteString("[up/dn] col  [lf/rt] issue  [enter] view  [n] new  [t] filter  [q] quit\n")
-
-	return b.String()
-}
-
-func renderDetail(m Model) string {
-	var b strings.Builder
-
-	if m.detailIssueID == "" {
-		b.WriteString("No issue selected.\n[q] back")
-		return b.String()
-	}
-
-	issue, ok := m.issues[m.detailIssueID]
-	if !ok {
-		f, err := m.store.LoadIssue(m.boardName, m.detailIssueID)
-		if err == nil {
-			issue = f
-			m.issues[m.detailIssueID] = f
-		}
-	}
-
-	if issue.Title == "" {
-		b.WriteString("Issue not found.\n[q] back")
-		return b.String()
-	}
-
-	b.WriteString("Issue ")
-	b.WriteString(m.detailIssueID)
-	b.WriteString(" -- ")
-	b.WriteString(issue.Title)
-	b.WriteString("\n\n")
-
-	b.WriteString("Status:   ")
-	for _, col := range m.board.Board.Columns {
-		if col.ID == issue.Column {
-			b.WriteString(col.Label)
-			break
-		}
-	}
-	b.WriteString("\n")
-
-	b.WriteString("Tags:     ")
-	b.WriteString(strings.Join(issue.Tags, ", "))
-	if len(issue.Tags) == 0 {
-		b.WriteString("none")
-	}
-	b.WriteString("\n")
-
-	b.WriteString("Created:  ")
-	b.WriteString(issue.CreatedBy.Name)
-	b.WriteString("\n\n")
-
-	b.WriteString("Description:\n")
-	if issue.Description != "" {
-		for _, line := range strings.Split(issue.Description, "\n") {
-			b.WriteString("  ")
-			b.WriteString(line)
-			b.WriteString("\n")
-		}
-	} else {
-		b.WriteString("  (no description)\n")
-	}
-
-	b.WriteString("\nHistory:\n")
-	for i := len(issue.History) - 1; i >= 0; i-- {
-		entry := issue.History[i]
-		b.WriteString("  ")
-		b.WriteString(entry.At.Format("2006-01-02 15:04"))
-		b.WriteString("  ")
-		b.WriteString(entry.By.Name)
-		b.WriteString("  ")
-		b.WriteString(entry.Type)
-		b.WriteString("\n")
-	}
-
-	b.WriteString("\n[q] back  [e] edit  [m] move  [d] delete\n")
-
-	return b.String()
-}
-
-func renderCreate(m Model) string {
-	var b strings.Builder
-
-	b.WriteString("Create new issue\n")
-	b.WriteString("------------------------------------------\n")
-	b.WriteString("Title:    [")
-	b.WriteString(m.formTitle)
-	b.WriteString("]\n")
-
-	b.WriteString("Column:   ")
-	if len(m.board.Board.Columns) > m.formColumn {
-		b.WriteString(m.board.Board.Columns[m.formColumn].Label)
-	}
-	b.WriteString("  (up/dn to change)\n")
-
-	b.WriteString("Tags:     [")
-	b.WriteString(strings.Join(m.formTags, ", "))
-	b.WriteString("]\n")
-
-	b.WriteString("\n[enter] create  [esc/c] cancel\n")
-
-	return b.String()
-}
-
-func renderMove(m Model) string {
-	var b strings.Builder
-
-	b.WriteString("Move issue ")
-	b.WriteString(m.detailIssueID)
-	b.WriteString("\n")
-	b.WriteString("------------------------------------------\n")
-	b.WriteString("Target column:\n\n")
-
-	for idx, col := range m.board.Board.Columns {
-		arrow := "  "
-		if idx == m.formColumn {
-			arrow = "-> "
-		}
-		b.WriteString(arrow)
-		b.WriteString(col.Label)
-		b.WriteString("\n")
-	}
-
-	b.WriteString("\n[enter] confirm  [esc/c] cancel\n")
-
-	return b.String()
-}
-
-func renderEdit(m Model) string {
-	var b strings.Builder
-
-	b.WriteString("Edit issue ")
-	b.WriteString(m.detailIssueID)
-	b.WriteString("\n")
-	b.WriteString("------------------------------------------\n")
-	b.WriteString("Title:    [")
-	b.WriteString(m.formTitle)
-	b.WriteString("]\n")
-
-	b.WriteString("Description:\n")
-	for _, line := range m.formDescLines {
-		b.WriteString("[")
-		b.WriteString(line)
-		b.WriteString("]\n")
-	}
-	b.WriteString("  (enter for newline, ctrl+d to finish)\n")
-
-	b.WriteString("Tags:     [")
-	b.WriteString(strings.Join(m.formTags, ", "))
-	b.WriteString("]\n")
-
-	b.WriteString("\n[enter] save  [esc/c] cancel\n")
-
-	return b.String()
-}
-
-func renderFilter(m Model) string {
-	var b strings.Builder
-
-	b.WriteString("Filter by tag: [")
-	b.WriteString(m.tagFilter)
-	b.WriteString("]\n")
-	b.WriteString("(tab to autocomplete, enter to confirm)\n")
-
-	return b.String()
 }

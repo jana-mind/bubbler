@@ -7,8 +7,8 @@ import (
 )
 
 var (
-	confirmWarnStyle = lipgloss.NewStyle().Foreground(lipgloss.Color("9")).Bold(true)
-	confirmHintStyle = lipgloss.NewStyle().Foreground(lipgloss.Color("245"))
+	confirmWarnStyle = lipgloss.NewStyle().Bold(true)
+	confirmHintStyle = lipgloss.NewStyle()
 )
 
 func RenderConfirm(detailIssueID string) string {

@@ -8,9 +8,9 @@ import (
 
 var (
 	detailTitleStyle = lipgloss.NewStyle().Bold(true)
-	detailMetaStyle  = lipgloss.NewStyle().Foreground(lipgloss.Color("245"))
-	detailHistStyle  = lipgloss.NewStyle().Foreground(lipgloss.Color("240"))
-	detailHintStyle  = lipgloss.NewStyle().Foreground(lipgloss.Color("245"))
+	detailMetaStyle  = lipgloss.NewStyle()
+	detailHistStyle  = lipgloss.NewStyle()
+	detailHintStyle  = lipgloss.NewStyle()
 )
 
 func RenderDetail(m TUIDetailModel) string {

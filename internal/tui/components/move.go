@@ -7,9 +7,9 @@ import (
 )
 
 var (
-	moveArrowStyle = lipgloss.NewStyle().Foreground(lipgloss.Color("13")).Bold(true)
+	moveArrowStyle = lipgloss.NewStyle().Bold(true)
 	moveLabelStyle = lipgloss.NewStyle()
-	moveHintStyle  = lipgloss.NewStyle().Foreground(lipgloss.Color("245"))
+	moveHintStyle  = lipgloss.NewStyle()
 )
 
 func RenderMove(m TUIMoveModel) string {

@@ -7,8 +7,8 @@ import (
 )
 
 var (
-	filterFieldStyle = lipgloss.NewStyle().Foreground(lipgloss.Color("13"))
-	filterHintStyle  = lipgloss.NewStyle().Foreground(lipgloss.Color("245"))
+	filterFieldStyle = lipgloss.NewStyle()
+	filterHintStyle  = lipgloss.NewStyle()
 )
 
 func RenderFilter(m TUIFilterModel) string {

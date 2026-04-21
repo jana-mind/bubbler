@@ -7,9 +7,9 @@ import (
 )
 
 var (
-	editLabelStyle = lipgloss.NewStyle().Foreground(lipgloss.Color("245"))
-	editFieldStyle = lipgloss.NewStyle().Foreground(lipgloss.Color("13"))
-	editHintStyle  = lipgloss.NewStyle().Foreground(lipgloss.Color("245"))
+	editLabelStyle = lipgloss.NewStyle()
+	editFieldStyle = lipgloss.NewStyle()
+	editHintStyle  = lipgloss.NewStyle()
 )
 
 func RenderEdit(m TUIEditModel) string {
