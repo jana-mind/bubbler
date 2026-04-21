@@ -603,9 +603,9 @@ func runMove(cmd *cobra.Command, args []string) error {
 	if len(args) == 1 {
 		var cols []string
 		for _, c := range board.Board.Columns {
-			cols = append(cols, c.ID)
+			cols = append(cols, fmt.Sprintf("%s (%s)", c.ID, c.Label))
 		}
-		return fmt.Errorf("you need to define a column; available columns are: %s", strings.Join(cols, ", "))
+		return fmt.Errorf("Error: you need to define a column. Available columns are: %s", strings.Join(cols, ", "))
 	}
 
 	targetCol := args[1]
