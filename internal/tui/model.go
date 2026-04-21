@@ -206,7 +206,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.issues = make(map[string]model.IssueFile)
 		return m, nil
 
-	case WindowResized:
+	case tea.WindowSizeMsg:
 		m.width = t.Width
 		m.height = t.Height
 		return m, nil
@@ -284,9 +284,7 @@ func parseDescription(desc string) []string {
 }
 
 func (m Model) View() tea.View {
-	v := tea.NewView(renderView(m))
-	v.AltScreen = true
-	return v
+	return tea.NewView(renderView(m))
 }
 
 func renderView(m Model) string {
@@ -324,7 +322,9 @@ func Run(boardName string) error {
 		return err
 	}
 	model := initialModel(boardName, store)
-	program := tea.NewProgram(model)
+	program := tea.NewProgram(model,
+		tea.WithWindowSize(80, 24),
+	)
 	_, err = program.Run()
 	return err
 }
