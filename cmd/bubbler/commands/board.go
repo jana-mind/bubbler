@@ -15,25 +15,32 @@ func newBoardCmd() *cobra.Command {
 		Use:   "board",
 		Short: "Manage board columns and tags",
 	}
-	boardCmd.AddCommand(newColumnsCmd())
-	boardCmd.AddCommand(newColumnAddCmd())
-	boardCmd.AddCommand(newColumnRemoveCmd())
-	boardCmd.AddCommand(newTagsCmd())
-	boardCmd.AddCommand(newTagAddCmd())
-	boardCmd.AddCommand(newTagRemoveCmd())
+	boardCmd.AddCommand(newColumnCmd())
+	boardCmd.AddCommand(newTagCmd())
 	return boardCmd
 }
 
-func newColumnsCmd() *cobra.Command {
-	columnsCmd := &cobra.Command{
-		Use:   "columns",
-		Short: "List all columns",
-		RunE:  runColumns,
+func newColumnCmd() *cobra.Command {
+	columnCmd := &cobra.Command{
+		Use:   "column",
+		Short: "Manage columns",
 	}
-	return columnsCmd
+	columnCmd.AddCommand(newColumnListCmd())
+	columnCmd.AddCommand(newColumnAddCmd())
+	columnCmd.AddCommand(newColumnRemoveCmd())
+	return columnCmd
 }
 
-func runColumns(cmd *cobra.Command, args []string) error {
+func newColumnListCmd() *cobra.Command {
+	columnListCmd := &cobra.Command{
+		Use:   "list",
+		Short: "List all columns",
+		RunE:  runColumnList,
+	}
+	return columnListCmd
+}
+
+func runColumnList(cmd *cobra.Command, args []string) error {
 	repoRoot, err := git.FindRepoRoot()
 	if err != nil {
 		return err
@@ -173,16 +180,27 @@ func runColumnRemove(cmd *cobra.Command, args []string) error {
 	return nil
 }
 
-func newTagsCmd() *cobra.Command {
-	tagsCmd := &cobra.Command{
-		Use:   "tags",
-		Short: "List all tags",
-		RunE:  runTags,
+func newTagCmd() *cobra.Command {
+	tagCmd := &cobra.Command{
+		Use:   "tag",
+		Short: "Manage tags",
 	}
-	return tagsCmd
+	tagCmd.AddCommand(newTagListCmd())
+	tagCmd.AddCommand(newTagAddCmd())
+	tagCmd.AddCommand(newTagRemoveCmd())
+	return tagCmd
 }
 
-func runTags(cmd *cobra.Command, args []string) error {
+func newTagListCmd() *cobra.Command {
+	tagListCmd := &cobra.Command{
+		Use:   "list",
+		Short: "List all tags",
+		RunE:  runTagList,
+	}
+	return tagListCmd
+}
+
+func runTagList(cmd *cobra.Command, args []string) error {
 	repoRoot, err := git.FindRepoRoot()
 	if err != nil {
 		return err

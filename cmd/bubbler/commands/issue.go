@@ -38,7 +38,7 @@ func newIssueCmd() *cobra.Command {
 	issueCmd.AddCommand(newShowCmd())
 	issueCmd.AddCommand(newEditCmd())
 	issueCmd.AddCommand(newMoveCmd())
-	issueCmd.AddCommand(newTagCmd())
+	issueCmd.AddCommand(newIssueTagCmd())
 	issueCmd.AddCommand(newUntagCmd())
 	issueCmd.AddCommand(newCommentCmd())
 	issueCmd.AddCommand(newHistoryCmd())
@@ -656,7 +656,7 @@ func runMove(cmd *cobra.Command, args []string) error {
 	return nil
 }
 
-func newTagCmd() *cobra.Command {
+func newIssueTagCmd() *cobra.Command {
 	tagCmd := &cobra.Command{
 		Use:               "tag <id> <tag>",
 		Short:             "Add a tag to an issue",
