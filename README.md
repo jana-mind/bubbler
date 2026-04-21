@@ -1,5 +1,7 @@
 # bubbler
 
+[![CI](https://github.com/jana-mind/bubbler/actions/workflows/ci.yml/badge.svg)](https://github.com/jana-mind/bubbler/actions/workflows/ci.yml) [![Release](https://github.com/jana-mind/bubbler/actions/workflows/release.yml/badge.svg)](https://github.com/jana-mind/bubbler/actions/workflows/release.yml)
+
 A kanban board for your terminal, living inside your git repo.
 
 ## Installation
