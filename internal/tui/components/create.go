@@ -35,6 +35,20 @@ func RenderCreate(m TUICreateModel) string {
 	b.WriteString(createFieldStyle.Render("]"))
 	b.WriteString("\n")
 
+	if m.Completion.Active && len(m.Completion.Matches) > 0 {
+		b.WriteString("\n")
+		for i, match := range m.Completion.Matches {
+			if i == m.Completion.Index {
+				b.WriteString(createFieldStyle.Render("> "))
+				b.WriteString(match)
+			} else {
+				b.WriteString("  ")
+				b.WriteString(match)
+			}
+			b.WriteString("\n")
+		}
+	}
+
 	b.WriteString("\n")
 	b.WriteString(createHintStyle.Render("[enter] create  [esc/c] cancel"))
 

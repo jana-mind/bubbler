@@ -21,6 +21,7 @@ type TUICreateModel struct {
 	FormTitle  string
 	FormColumn int
 	FormTags   []string
+	Completion CompletionViewModel
 }
 
 type TUIMoveModel struct {
@@ -36,6 +37,7 @@ type TUIEditModel struct {
 	FormTitle     string
 	FormDescLines []string
 	FormTags      []string
+	Completion   CompletionViewModel
 }
 
 type TUIFilterModel struct {

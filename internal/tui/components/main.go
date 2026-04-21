@@ -20,6 +20,13 @@ type MainViewModel struct {
 	BoardName     string
 	Width         int
 	Height        int
+	Completion   CompletionViewModel
+}
+
+type CompletionViewModel struct {
+	Active  bool
+	Matches []string
+	Index   int
 }
 
 func RenderView(m MainViewModel) string {
@@ -55,6 +62,7 @@ func RenderView(m MainViewModel) string {
 			FormTitle:  m.FormTitle,
 			FormColumn: m.FormColumn,
 			FormTags:   m.FormTags,
+			Completion: m.Completion,
 		})
 	case 3:
 		return RenderMove(TUIMoveModel{
@@ -70,12 +78,13 @@ func RenderView(m MainViewModel) string {
 			FormTitle:     m.FormTitle,
 			FormDescLines: m.FormDescLines,
 			FormTags:      m.FormTags,
+			Completion:   m.Completion,
 		})
 	case 5:
 		return RenderFilter(TUIFilterModel{
 			Board:     m.Board,
 			TagFilter: m.TagFilter,
-		})
+		}, m.Completion)
 	default:
 		return "Unknown view\n"
 	}

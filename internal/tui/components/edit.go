@@ -40,6 +40,20 @@ func RenderEdit(m TUIEditModel) string {
 	b.WriteString(editFieldStyle.Render("]"))
 	b.WriteString("\n")
 
+	if m.Completion.Active && len(m.Completion.Matches) > 0 {
+		b.WriteString("\n")
+		for i, match := range m.Completion.Matches {
+			if i == m.Completion.Index {
+				b.WriteString(editFieldStyle.Render("> "))
+				b.WriteString(match)
+			} else {
+				b.WriteString("  ")
+				b.WriteString(match)
+			}
+			b.WriteString("\n")
+		}
+	}
+
 	b.WriteString("\n")
 	b.WriteString(editHintStyle.Render("[enter] save  [esc/c] cancel"))
 

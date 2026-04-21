@@ -337,6 +337,11 @@ func (m Model) View() tea.View {
 		BoardName:     m.boardName,
 		Width:         m.width,
 		Height:        m.height,
+		Completion: components.CompletionViewModel{
+			Active:  m.completion.active,
+			Matches: m.completion.matches,
+			Index:   m.completion.index,
+		},
 	}))
 	v.AltScreen = true
 	return v
