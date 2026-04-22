@@ -2,7 +2,7 @@
 
 [![CI](https://github.com/jana-mind/bubbler/actions/workflows/ci.yml/badge.svg)](https://github.com/jana-mind/bubbler/actions/workflows/ci.yml) [![Release](https://github.com/jana-mind/bubbler/actions/workflows/release.yml/badge.svg)](https://github.com/jana-mind/bubbler/actions/workflows/release.yml)
 
-Sand **bubbler** crabs are methodical. *They sit at their spot, pick up sand, extract what's useful, disregard the rest and set it aside.* bubbler strives to be this for in-repo kanban boards. Simple, yet powerful: building big projects with simple boards that don't get in your way.
+Sand **bubbler** crabs are methodical. *They sit at their spot, pick up sand, extract what's useful, disregard the rest and set it aside.* bubbler strives to be like this, but for in-repo kanban boards. Simple, yet powerful: building big projects with simple boards that don't get in your way.
 
 (And also it is using bubbletea for it's optional TUI and bubbler worked quite well with that)
 
