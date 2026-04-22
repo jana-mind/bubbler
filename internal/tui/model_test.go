@@ -301,6 +301,134 @@ func TestBoardLoaded(t *testing.T) {
 	})
 }
 
+func TestCreateSubmit(t *testing.T) {
+	t.Run("empty title sets writeErr and does not create issue", func(t *testing.T) {
+		store := &mockStore{}
+		m := initialModel("default", store)
+		m.formTitle = ""
+		m.view = viewCreate
+
+		result, cmd := m.Update(CreateSubmit{})
+		m = result.(Model)
+		if m.writeErr == nil {
+			t.Error("expected writeErr to be set")
+		}
+		if m.writing {
+			t.Error("expected writing to be false")
+		}
+		if cmd != nil {
+			t.Error("expected no cmd")
+		}
+	})
+
+	t.Run("non-empty title triggers write operation", func(t *testing.T) {
+		store := &mockStore{}
+		m := initialModel("default", store)
+		m.formTitle = "Test Issue"
+		m.formColumn = 0
+		m.formTags = []string{"bug"}
+		m.board = model.BoardFile{
+			Board: model.Board{
+				Columns: []model.Column{
+					{ID: "col1", Label: "Col 1"},
+				},
+				Tags: []string{"bug"},
+			},
+		}
+		m.writing = false
+
+		result, cmd := m.Update(CreateSubmit{})
+		m = result.(Model)
+		if !m.writing {
+			t.Error("expected writing to be true")
+		}
+		if m.pendingWrite == nil {
+			t.Error("expected pendingWrite to be set")
+		}
+		if cmd == nil {
+			t.Error("expected cmd to be returned")
+		}
+	})
+}
+
+func TestMoveSubmit(t *testing.T) {
+	t.Run("non-empty detailIssueID triggers write operation", func(t *testing.T) {
+		store := &mockStore{}
+		m := initialModel("default", store)
+		m.detailIssueID = "issue1"
+		m.issues["issue1"] = model.IssueFile{
+			ID:     "issue1",
+			Title:  "Test",
+			Column: "col1",
+		}
+		m.formColumn = 1
+		m.board = model.BoardFile{
+			Board: model.Board{
+				Columns: []model.Column{
+					{ID: "col1", Label: "Col 1"},
+					{ID: "col2", Label: "Col 2"},
+				},
+			},
+		}
+
+		result, cmd := m.Update(MoveSubmit{})
+		m = result.(Model)
+		if !m.writing {
+			t.Error("expected writing to be true")
+		}
+		if cmd == nil {
+			t.Error("expected cmd to be returned")
+		}
+	})
+}
+
+func TestEditSave(t *testing.T) {
+	t.Run("no detailIssueID does nothing", func(t *testing.T) {
+		store := &mockStore{}
+		m := initialModel("default", store)
+		m.detailIssueID = ""
+
+		result, cmd := m.Update(EditSave{})
+		m = result.(Model)
+		if cmd != nil {
+			t.Error("expected no cmd")
+		}
+	})
+
+	t.Run("no changes returns to detail view without writing", func(t *testing.T) {
+		store := &mockStore{}
+		m := initialModel("default", store)
+		m.detailIssueID = "issue1"
+		m.formTitle = "Test Issue"
+		m.formDescLines = nil
+		m.formTags = nil
+		m.issues["issue1"] = model.IssueFile{
+			ID:          "issue1",
+			Title:       "Test Issue",
+			Column:      "col1",
+			Description: "",
+			Tags:        nil,
+		}
+		m.board = model.BoardFile{
+			Board: model.Board{
+				Columns: []model.Column{
+					{ID: "col1", Label: "Col 1"},
+				},
+				Tags: []string{},
+			},
+		}
+
+		result, cmd := m.Update(EditSave{})
+		m = result.(Model)
+		if m.view != viewDetail {
+			t.Errorf("expected viewDetail, got %v", m.view)
+		}
+		if cmd != nil {
+			t.Error("expected no cmd")
+		}
+	})
+}
+
 func TestFormChanges(t *testing.T) {
 	t.Run("FormTitleChanged updates formTitle", func(t *testing.T) {
 		store := &mockStore{}

@@ -345,40 +345,46 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return m, nil
 
 	case CreateSubmit:
-		existingIDs := make([]string, len(m.board.Issues))
-		for i, iss := range m.board.Issues {
-			existingIDs[i] = iss.ID
-		}
-		newID, err := id.Generate(existingIDs)
-		if err != nil {
-			m.writeErr = err
+		if m.formTitle == "" {
+			m.writeErr = errors.New("title cannot be empty")
 			return m, nil
 		}
-		now := time.Now()
-		col := m.board.Board.Columns[m.formColumn]
-		entry := model.HistoryEntry{
-			Type: "created",
-			At:   now,
-			By:   m.gitIdentity,
-			Data: model.CreatedEntry{
-				Title:  m.formTitle,
-				Column: col.ID,
-				Tags:   m.formTags,
-			},
+		{
+			existingIDs := make([]string, len(m.board.Issues))
+			for i, iss := range m.board.Issues {
+				existingIDs[i] = iss.ID
+			}
+			newID, err := id.Generate(existingIDs)
+			if err != nil {
+				m.writeErr = err
+				return m, nil
+			}
+			now := time.Now()
+			col := m.board.Board.Columns[m.formColumn]
+			entry := model.HistoryEntry{
+				Type: "created",
+				At:   now,
+				By:   m.gitIdentity,
+				Data: model.CreatedEntry{
+					Title:  m.formTitle,
+					Column: col.ID,
+					Tags:   m.formTags,
+				},
+			}
+			issue := model.IssueFile{
+				ID:          newID,
+				Title:       m.formTitle,
+				Column:      col.ID,
+				Tags:        m.formTags,
+				Description: strings.Join(m.formDescLines, "\n"),
+				CreatedAt:   now,
+				CreatedBy:   m.gitIdentity,
+				History:     nil,
+			}
+			m.writing = true
+			m.pendingWrite = pendingIssueCreate{boardName: m.boardName, issue: issue, entries: []model.HistoryEntry{entry}}
+			return m, cmdSaveIssue(m.boardName, issue, []model.HistoryEntry{entry}, m.store)
 		}
-		issue := model.IssueFile{
-			ID:          newID,
-			Title:       m.formTitle,
-			Column:      col.ID,
-			Tags:        m.formTags,
-			Description: strings.Join(m.formDescLines, "\n"),
-			CreatedAt:   now,
-			CreatedBy:   m.gitIdentity,
-			History:     nil,
-		}
-		m.writing = true
-		m.pendingWrite = pendingIssueCreate{boardName: m.boardName, issue: issue, entries: []model.HistoryEntry{entry}}
-		return m, cmdSaveIssue(m.boardName, issue, []model.HistoryEntry{entry}, m.store)
 
 	case MoveSubmit:
 		issue, ok := m.issues[m.detailIssueID]
