@@ -31,11 +31,13 @@ This creates `.bubble/` containing `default.yaml` and a `default/` directory for
 
 ### Using .bubble as a git submodule
 
-If you want bubbler to automatically commit and push board changes alongside your project:
+If you want bubbler to automatically commit and push board changes alongside your project, initialize `.bubble/` as a git submodule of your project:
 
 ```
-git submodule add https://github.com/jana-mind/bubbler.git .bubble
+bubbler init --submodule
 ```
+
+This creates `.bubble/` as an empty submodule that bubbler will manage. On every board write, bubbler stages changes, commits with a descriptive message, and pushes the submodule — keeping your board history separate from your project history.
 
 After cloning a repo that has `.bubble` as a submodule:
 
@@ -43,7 +45,13 @@ After cloning a repo that has `.bubble` as a submodule:
 git submodule update --init
 ```
 
-To update bubbler to the latest version when using it as a submodule:
+To switch an existing `.bubble/` directory to submodule mode:
+
+```
+git submodule add <your-repo-url> .bubble
+```
+
+To update bubbler when using it as a submodule:
 
 ```
 cd .bubble && git pull && cd .. && git add .bubble && git commit -m "Update bubbler"
