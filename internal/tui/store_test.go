@@ -1,6 +1,7 @@
 package tui
 
 import (
+	"os"
 	"testing"
 
 	"github.com/jana-mind/bubbler/internal/model"
@@ -113,6 +114,28 @@ func TestStoreErrors(t *testing.T) {
 		err := s.DeleteIssue("default", "abc123")
 		if err != errTest {
 			t.Errorf("expected errTest, got %v", err)
+		}
+	})
+
+	t.Run("LoadBoard board not found returns error with no panic", func(t *testing.T) {
+		s := &errorStore{loadBoardErr: os.ErrNotExist}
+		bf, err := s.LoadBoard("nonexistent")
+		if err == nil {
+			t.Error("expected error, got nil")
+		}
+		if bf.Board.Name != "" {
+			t.Errorf("expected empty board, got name %q", bf.Board.Name)
+		}
+	})
+
+	t.Run("LoadIssue not found returns error with no panic", func(t *testing.T) {
+		s := &errorStore{loadIssueErr: os.ErrNotExist}
+		f, err := s.LoadIssue("default", "nonexistent")
+		if err == nil {
+			t.Error("expected error, got nil")
+		}
+		if f.ID != "" {
+			t.Errorf("expected empty issue, got ID %q", f.ID)
 		}
 	})
 }
