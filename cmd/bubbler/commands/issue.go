@@ -6,11 +6,11 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"time"
 
 	"github.com/jana-mind/bubbler/internal/git"
-	"github.com/jana-mind/bubbler/internal/id"
 	"github.com/jana-mind/bubbler/internal/model"
 	"github.com/jana-mind/bubbler/internal/store"
 	"github.com/spf13/cobra"
@@ -370,15 +370,17 @@ func runCreate(cmd *cobra.Command, opts *createOptions) error {
 		return err
 	}
 
-	existingIDs := make([]string, len(board.Issues))
-	for i, issue := range board.Issues {
-		existingIDs[i] = issue.ID
+	if board.Board.NextID == 0 {
+		maxID := 0
+		for _, iss := range board.Issues {
+			if n, err := strconv.Atoi(iss.ID); err == nil && n > maxID {
+				maxID = n
+			}
+		}
+		board.Board.NextID = maxID + 1
 	}
 
-	issueID, err := id.Generate(existingIDs)
-	if err != nil {
-		return fmt.Errorf("generate ID: %w", err)
-	}
+	issueID := board.Board.TakeNextID()
 
 	now := time.Now().UTC()
 

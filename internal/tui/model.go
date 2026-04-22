@@ -3,13 +3,13 @@ package tui
 import (
 	"errors"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"time"
 
 	"charm.land/bubbletea/v2"
 
 	"github.com/jana-mind/bubbler/internal/git"
-	"github.com/jana-mind/bubbler/internal/id"
 	"github.com/jana-mind/bubbler/internal/model"
 	"github.com/jana-mind/bubbler/internal/tui/components"
 )
@@ -134,6 +134,15 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch t := msg.(type) {
 	case BoardLoaded:
 		m.board = t.Board
+		if m.board.Board.NextID == 0 {
+			maxID := 0
+			for _, iss := range m.board.Issues {
+				if n, err := strconv.Atoi(iss.ID); err == nil && n > maxID {
+					maxID = n
+				}
+			}
+			m.board.Board.NextID = maxID + 1
+		}
 		m.issues = make(map[string]model.IssueFile)
 		m.loading = false
 		return m, nil
@@ -349,42 +358,36 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.writeErr = errors.New("title cannot be empty")
 			return m, nil
 		}
-		{
-			existingIDs := make([]string, len(m.board.Issues))
-			for i, iss := range m.board.Issues {
-				existingIDs[i] = iss.ID
-			}
-			newID, err := id.Generate(existingIDs)
-			if err != nil {
-				m.writeErr = err
-				return m, nil
-			}
-			now := time.Now()
-			col := m.board.Board.Columns[m.formColumn]
-			entry := model.HistoryEntry{
-				Type: "created",
-				At:   now,
-				By:   m.gitIdentity,
-				Data: model.CreatedEntry{
-					Title:  m.formTitle,
-					Column: col.ID,
-					Tags:   m.formTags,
-				},
-			}
-			issue := model.IssueFile{
-				ID:          newID,
-				Title:       m.formTitle,
-				Column:      col.ID,
-				Tags:        m.formTags,
-				Description: strings.Join(m.formDescLines, "\n"),
-				CreatedAt:   now,
-				CreatedBy:   m.gitIdentity,
-				History:     nil,
-			}
-			m.writing = true
-			m.pendingWrite = pendingIssueCreate{boardName: m.boardName, issue: issue, entries: []model.HistoryEntry{entry}}
-			return m, cmdSaveIssue(m.boardName, issue, []model.HistoryEntry{entry}, m.store)
+		newID := m.board.Board.TakeNextID()
+		if err := m.store.SaveBoard(m.boardName, m.board); err != nil {
+			m.writeErr = err
+			return m, nil
 		}
+		now := time.Now()
+		col := m.board.Board.Columns[m.formColumn]
+		entry := model.HistoryEntry{
+			Type: "created",
+			At:   now,
+			By:   m.gitIdentity,
+			Data: model.CreatedEntry{
+				Title:  m.formTitle,
+				Column: col.ID,
+				Tags:   m.formTags,
+			},
+		}
+		issue := model.IssueFile{
+			ID:          newID,
+			Title:       m.formTitle,
+			Column:      col.ID,
+			Tags:        m.formTags,
+			Description: strings.Join(m.formDescLines, "\n"),
+			CreatedAt:   now,
+			CreatedBy:   m.gitIdentity,
+			History:     nil,
+		}
+		m.writing = true
+		m.pendingWrite = pendingIssueCreate{boardName: m.boardName, issue: issue, entries: []model.HistoryEntry{entry}}
+		return m, cmdSaveIssue(m.boardName, issue, []model.HistoryEntry{entry}, m.store)
 
 	case MoveSubmit:
 		issue, ok := m.issues[m.detailIssueID]

@@ -55,6 +55,51 @@ func TestBoard_TagSet(t *testing.T) {
 	}
 }
 
+func TestBoard_TakeNextID(t *testing.T) {
+	b := Board{NextID: 1}
+
+	id1 := b.TakeNextID()
+	if id1 != "1" {
+		t.Errorf("expected first ID to be \"1\", got %q", id1)
+	}
+	if b.NextID != 2 {
+		t.Errorf("expected NextID to be 2 after first call, got %d", b.NextID)
+	}
+
+	id2 := b.TakeNextID()
+	if id2 != "2" {
+		t.Errorf("expected second ID to be \"2\", got %q", id2)
+	}
+	if b.NextID != 3 {
+		t.Errorf("expected NextID to be 3 after second call, got %d", b.NextID)
+	}
+
+	id3 := b.TakeNextID()
+	if id3 != "3" {
+		t.Errorf("expected third ID to be \"3\", got %q", id3)
+	}
+}
+
+func TestBoard_NextIDField(t *testing.T) {
+	bf := BoardFile{
+		Board: Board{
+			Name:    "default",
+			Columns: []Column{{ID: "col1", Label: "Col 1"}},
+			Tags:    []string{},
+			NextID:  5,
+		},
+		Issues: []IssueSummary{},
+	}
+
+	id := bf.Board.TakeNextID()
+	if id != "5" {
+		t.Errorf("expected ID \"5\", got %q", id)
+	}
+	if bf.Board.NextID != 6 {
+		t.Errorf("expected NextID 6, got %d", bf.Board.NextID)
+	}
+}
+
 func TestBoardFile_Validate(t *testing.T) {
 	t.Run("valid board", func(t *testing.T) {
 		bf := BoardFile{

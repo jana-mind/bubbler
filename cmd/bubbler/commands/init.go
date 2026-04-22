@@ -21,6 +21,7 @@ type boardMeta struct {
 	Name    string   `yaml:"name"`
 	Columns []column `yaml:"columns"`
 	Tags    []string `yaml:"tags"`
+	NextID  int      `yaml:"next_id"`
 }
 
 type column struct {
@@ -62,7 +63,8 @@ func runInit(cmd *cobra.Command, args []string) error {
 				{ID: "in-progress", Label: "In Progress"},
 				{ID: "completed", Label: "Completed"},
 			},
-			Tags: []string{"bug", "feature", "docs", "chore"},
+			Tags:   []string{"bug", "feature", "docs", "chore"},
+			NextID: 1,
 		},
 	}
 

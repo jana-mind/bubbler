@@ -1,11 +1,21 @@
 package model
 
-import "time"
+import (
+	"strconv"
+	"time"
+)
 
 type Board struct {
 	Name    string   `yaml:"name"`
 	Columns []Column `yaml:"columns"`
 	Tags    []string `yaml:"tags"`
+	NextID  int      `yaml:"next_id"`
+}
+
+func (b *Board) TakeNextID() string {
+	id := b.NextID
+	b.NextID++
+	return strconv.Itoa(id)
 }
 
 type Column struct {
