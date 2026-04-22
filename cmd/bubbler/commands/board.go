@@ -2,8 +2,12 @@ package commands
 
 import (
 	"fmt"
+	"os"
+	"path/filepath"
 	"strings"
 
+	"github.com/jana-mind/bubbler/internal/git"
+	"github.com/jana-mind/bubbler/internal/model"
 	"github.com/jana-mind/bubbler/internal/store"
 	"github.com/spf13/cobra"
 )
@@ -13,9 +17,166 @@ func newBoardCmd() *cobra.Command {
 		Use:   "board",
 		Short: "Manage board columns and tags",
 	}
+	boardCmd.AddCommand(newBoardListCmd())
+	boardCmd.AddCommand(newBoardCreateCmd())
+	boardCmd.AddCommand(newBoardDeleteCmd())
 	boardCmd.AddCommand(newColumnCmd())
 	boardCmd.AddCommand(newTagCmd())
 	return boardCmd
+}
+
+func newBoardListCmd() *cobra.Command {
+	listCmd := &cobra.Command{
+		Use:   "list",
+		Short: "List all boards",
+		RunE:  runBoardList,
+	}
+	return listCmd
+}
+
+func runBoardList(cmd *cobra.Command, args []string) error {
+	repoRoot, err := git.FindRepoRoot()
+	if err != nil {
+		return err
+	}
+	bubblePath := filepath.Join(repoRoot, ".bubble")
+	entries, err := os.ReadDir(bubblePath)
+	if err != nil {
+		return fmt.Errorf("read bubble directory: %w", err)
+	}
+	for _, entry := range entries {
+		if entry.IsDir() || filepath.Ext(entry.Name()) != ".yaml" {
+			continue
+		}
+		name := strings.TrimSuffix(entry.Name(), ".yaml")
+		fmt.Println(name)
+	}
+	return nil
+}
+
+func newBoardCreateCmd() *cobra.Command {
+	createCmd := &cobra.Command{
+		Use:   "create <name>",
+		Short: "Create a new board",
+		Args:  cobra.ExactArgs(1),
+		RunE:  runBoardCreate,
+	}
+	return createCmd
+}
+
+func runBoardCreate(cmd *cobra.Command, args []string) error {
+	name := args[0]
+	if name == "" {
+		return fmt.Errorf("board name cannot be empty")
+	}
+	if strings.ContainsAny(name, "/\\.") {
+		return fmt.Errorf("board name must not contain /, \\, or .")
+	}
+
+	repoRoot, err := git.FindRepoRoot()
+	if err != nil {
+		return err
+	}
+	bubblePath := filepath.Join(repoRoot, ".bubble")
+	boardFile := filepath.Join(bubblePath, name+".yaml")
+	if _, err := os.Stat(boardFile); err == nil {
+		return fmt.Errorf("board %q already exists", name)
+	}
+
+	issuesDir := filepath.Join(bubblePath, name)
+	if err := os.MkdirAll(issuesDir, 0755); err != nil {
+		return fmt.Errorf("create issues directory: %w", err)
+	}
+
+	defaultColumns := []column{
+		{ID: "waiting", Label: "Waiting"},
+		{ID: "in-progress", Label: "In Progress"},
+		{ID: "completed", Label: "Completed"},
+	}
+	b := board{
+		Board: boardMeta{
+			Name:    name,
+			Columns: defaultColumns,
+			Tags:    []string{"bug", "feature", "docs", "chore"},
+			NextID:  1,
+		},
+	}
+
+	boardPath := filepath.Join(bubblePath, name+".yaml")
+	if err := store.SaveBoardFile(boardPath, modelBoardToBoardFile(b)); err != nil {
+		os.RemoveAll(issuesDir)
+		return fmt.Errorf("save board file: %w", err)
+	}
+
+	fmt.Println(name)
+	return nil
+}
+
+func newBoardDeleteCmd() *cobra.Command {
+	deleteCmd := &cobra.Command{
+		Use:   "delete <name>",
+		Short: "Delete a board",
+		Args:  cobra.ExactArgs(1),
+		RunE:  runBoardDelete,
+	}
+	return deleteCmd
+}
+
+func runBoardDelete(cmd *cobra.Command, args []string) error {
+	name := args[0]
+	if name == "default" {
+		return fmt.Errorf("the default board may never be deleted")
+	}
+
+	repoRoot, err := git.FindRepoRoot()
+	if err != nil {
+		return err
+	}
+	bubblePath := filepath.Join(repoRoot, ".bubble")
+	boardFile := filepath.Join(bubblePath, name+".yaml")
+	if _, err := os.Stat(boardFile); os.IsNotExist(err) {
+		return fmt.Errorf("board %q does not exist", name)
+	}
+
+	issuesDir := filepath.Join(bubblePath, name)
+	entries, err := os.ReadDir(issuesDir)
+	if err != nil {
+		return fmt.Errorf("read issues directory: %w", err)
+	}
+	var issues []string
+	for _, e := range entries {
+		if !e.IsDir() && strings.HasSuffix(e.Name(), ".yaml") {
+			issues = append(issues, e.Name())
+		}
+	}
+	if len(issues) > 0 {
+		return fmt.Errorf("board %q has %d issue(s) and cannot be deleted", name, len(issues))
+	}
+
+	if err := os.Remove(boardFile); err != nil {
+		return fmt.Errorf("remove board file: %w", err)
+	}
+	if err := os.RemoveAll(issuesDir); err != nil {
+		return fmt.Errorf("remove issues directory: %w", err)
+	}
+
+	return nil
+}
+
+func modelBoardToBoardFile(b board) model.BoardFile {
+	cols := make([]model.Column, len(b.Board.Columns))
+	for i, c := range b.Board.Columns {
+		cols[i] = model.Column{ID: c.ID, Label: c.Label}
+	}
+	return model.BoardFile{
+		Board: model.Board{
+			Name:    b.Board.Name,
+			Columns: cols,
+			Tags:    b.Board.Tags,
+			NextID:  b.Board.NextID,
+		},
+		Issues: nil,
+	}
 }
 
 func newColumnCmd() *cobra.Command {
