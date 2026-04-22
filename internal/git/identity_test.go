@@ -8,6 +8,23 @@ import (
 )
 
 func TestGetIdentity(t *testing.T) {
+	os.Unsetenv("GIT_AUTHOR_NAME")
+	os.Unsetenv("GIT_AUTHOR_EMAIL")
+	// Save and clear global git config for this test
+	oldHome := os.Getenv("HOME")
+	cfgPath := oldHome + "/.gitconfig"
+	var backup []byte
+	if _, err := os.Stat(cfgPath); err == nil {
+		backup, _ = os.ReadFile(cfgPath)
+	}
+	// Write empty gitconfig
+	tmpCfg := "[user]\n\tname = \n\temail = \n"
+	os.WriteFile(cfgPath, []byte(tmpCfg), 0644)
+	os.Setenv("HOME", oldHome)
+	defer func() {
+		os.WriteFile(cfgPath, backup, 0644)
+	}()
+
 	tmp := t.TempDir()
 	repo, err := git.PlainInit(tmp, false)
 	if err != nil {

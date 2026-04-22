@@ -162,11 +162,11 @@ func TestErrorStoreWithModel(t *testing.T) {
 		m.board = model.BoardFile{
 			Board: model.Board{
 				Columns: []model.Column{
-						{ID: "col1", Label: "Col 1"},
-					},
-					Tags: []string{},
+					{ID: "col1", Label: "Col 1"},
 				},
-			}
+				Tags: []string{},
+			},
+		}
 
 		m.issues["issue1"] = model.IssueFile{ID: "issue1", Title: "Test", Column: "col1"}
 		result, _ := m.Update(IssueFocused{IssueID: "issue1"})
