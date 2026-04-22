@@ -878,4 +878,353 @@ func TestContains(t *testing.T) {
 	})
 }
 
+func makeKey(name string) tea.KeyMsg {
+	switch name {
+	case "up":
+		return tea.KeyPressMsg{Code: tea.KeyUp}
+	case "down":
+		return tea.KeyPressMsg{Code: tea.KeyDown}
+	case "enter":
+		return tea.KeyPressMsg{Code: tea.KeyEnter}
+	case "tab":
+		return tea.KeyPressMsg{Code: tea.KeyTab}
+	case "esc":
+		return tea.KeyPressMsg{Code: tea.KeyEsc}
+	case "left":
+		return tea.KeyPressMsg{Code: tea.KeyLeft}
+	case "right":
+		return tea.KeyPressMsg{Code: tea.KeyRight}
+	default:
+		r := rune(name[0])
+		return tea.KeyPressMsg{Code: r}
+	}
+}
+
+func TestCreateViewCycling(t *testing.T) {
+	t.Run("up cycles formColumn down", func(t *testing.T) {
+		store := &mockStore{}
+		m := initialModel("default", store)
+		m.view = viewCreate
+		m.formColumn = 0
+		m.board = model.BoardFile{
+			Board: model.Board{
+				Columns: []model.Column{
+					{ID: "col1", Label: "Col 1"},
+					{ID: "col2", Label: "Col 2"},
+				},
+			},
+		}
+
+		result, _ := m.Update(makeKey("up"))
+		m = result.(Model)
+		if m.formColumn != 1 {
+			t.Errorf("expected formColumn 1, got %d", m.formColumn)
+		}
+	})
+
+	t.Run("down cycles formColumn up", func(t *testing.T) {
+		store := &mockStore{}
+		m := initialModel("default", store)
+		m.view = viewCreate
+		m.formColumn = 0
+		m.board = model.BoardFile{
+			Board: model.Board{
+				Columns: []model.Column{
+					{ID: "col1", Label: "Col 1"},
+					{ID: "col2", Label: "Col 2"},
+				},
+			},
+		}
+
+		result, _ := m.Update(makeKey("down"))
+		m = result.(Model)
+		if m.formColumn != 1 {
+			t.Errorf("expected formColumn 1, got %d", m.formColumn)
+		}
+	})
+
+	t.Run("up from 0 wraps to last column", func(t *testing.T) {
+		store := &mockStore{}
+		m := initialModel("default", store)
+		m.view = viewCreate
+		m.formColumn = 0
+		m.board = model.BoardFile{
+			Board: model.Board{
+				Columns: []model.Column{
+					{ID: "col1", Label: "Col 1"},
+					{ID: "col2", Label: "Col 2"},
+				},
+			},
+		}
+
+		result, _ := m.Update(makeKey("up"))
+		m = result.(Model)
+		if m.formColumn != 1 {
+			t.Errorf("expected formColumn 1, got %d", m.formColumn)
+		}
+	})
+
+	t.Run("down from last wraps to 0", func(t *testing.T) {
+		store := &mockStore{}
+		m := initialModel("default", store)
+		m.view = viewCreate
+		m.formColumn = 1
+		m.board = model.BoardFile{
+			Board: model.Board{
+				Columns: []model.Column{
+					{ID: "col1", Label: "Col 1"},
+					{ID: "col2", Label: "Col 2"},
+				},
+			},
+		}
+
+		result, _ := m.Update(makeKey("down"))
+		m = result.(Model)
+		if m.formColumn != 0 {
+			t.Errorf("expected formColumn 0, got %d", m.formColumn)
+		}
+	})
+}
+
+func TestEscapeKeyDiscardsFormState(t *testing.T) {
+	t.Run("esc from create returns to board", func(t *testing.T) {
+		store := &mockStore{}
+		m := initialModel("default", store)
+		m.view = viewCreate
+		m.formTitle = "some title"
+		m.formColumn = 2
+		m.formTags = []string{"bug"}
+		m.formDescLines = []string{"desc line"}
+		m.tagInput = "feat"
+		m.completion.active = false
+
+		result, _ := m.Update(makeKey("esc"))
+		m = result.(Model)
+		if m.view != viewBoard {
+			t.Errorf("expected viewBoard, got %v", m.view)
+		}
+	})
+
+	t.Run("esc from move returns to detail", func(t *testing.T) {
+		store := &mockStore{}
+		m := initialModel("default", store)
+		m.view = viewMove
+
+		result, _ := m.Update(makeKey("esc"))
+		m = result.(Model)
+		if m.view != viewDetail {
+			t.Errorf("expected viewDetail, got %v", m.view)
+		}
+	})
+
+	t.Run("esc from edit returns to detail", func(t *testing.T) {
+		store := &mockStore{}
+		m := initialModel("default", store)
+		m.view = viewEdit
+		m.formTitle = "modified"
+
+		result, _ := m.Update(makeKey("esc"))
+		m = result.(Model)
+		if m.view != viewDetail {
+			t.Errorf("expected viewDetail, got %v", m.view)
+		}
+	})
+}
+
+func TestCompletionEscapeClearsState(t *testing.T) {
+	t.Run("esc during active completion clears completion and tagInput", func(t *testing.T) {
+		store := &mockStore{}
+		m := initialModel("default", store)
+		m.view = viewCreate
+		m.tagInput = "bu"
+		m.completion.active = true
+		m.completion.target = "tag"
+
+		result, _ := m.Update(makeKey("esc"))
+		m = result.(Model)
+		if m.completion.active {
+			t.Error("expected completion.active to be false")
+		}
+		if m.tagInput != "" {
+			t.Errorf("expected tagInput to be cleared, got %q", m.tagInput)
+		}
+	})
+
+	t.Run("c during active completion clears completion and tagInput", func(t *testing.T) {
+		store := &mockStore{}
+		m := initialModel("default", store)
+		m.view = viewFilter
+		m.tagFilter = "bu"
+		m.completion.active = true
+		m.completion.target = "filter"
+
+		result, _ := m.Update(makeKey("c"))
+		m = result.(Model)
+		if m.completion.active {
+			t.Error("expected completion.active to be false")
+		}
+	})
+}
+
+func TestCompletionNavigateCycles(t *testing.T) {
+	t.Run("tab cycles completion index forward", func(t *testing.T) {
+		store := &mockStore{}
+		m := initialModel("default", store)
+		m.view = viewCreate
+		m.tagInput = ""
+		m.completion.active = true
+		m.completion.matches = []string{"bug", "feature", "chore"}
+		m.completion.index = 0
+
+		result, _ := m.Update(makeKey("tab"))
+		m = result.(Model)
+		if m.completion.index != 1 {
+			t.Errorf("expected index 1, got %d", m.completion.index)
+		}
+	})
+
+	t.Run("down cycles completion index forward", func(t *testing.T) {
+		store := &mockStore{}
+		m := initialModel("default", store)
+		m.view = viewCreate
+		m.completion.active = true
+		m.completion.matches = []string{"bug", "feature", "chore"}
+		m.completion.index = 1
+
+		result, _ := m.Update(makeKey("down"))
+		m = result.(Model)
+		if m.completion.index != 2 {
+			t.Errorf("expected index 2, got %d", m.completion.index)
+		}
+	})
+
+	t.Run("up cycles completion index backward", func(t *testing.T) {
+		store := &mockStore{}
+		m := initialModel("default", store)
+		m.view = viewCreate
+		m.completion.active = true
+		m.completion.matches = []string{"bug", "feature", "chore"}
+		m.completion.index = 1
+
+		result, _ := m.Update(makeKey("up"))
+		m = result.(Model)
+		if m.completion.index != 0 {
+			t.Errorf("expected index 0, got %d", m.completion.index)
+		}
+	})
+
+	t.Run("up from index 0 wraps to last", func(t *testing.T) {
+		store := &mockStore{}
+		m := initialModel("default", store)
+		m.view = viewCreate
+		m.completion.active = true
+		m.completion.matches = []string{"bug", "feature", "chore"}
+		m.completion.index = 0
+
+		result, _ := m.Update(makeKey("up"))
+		m = result.(Model)
+		if m.completion.index != 2 {
+			t.Errorf("expected index 2, got %d", m.completion.index)
+		}
+	})
+}
+
+func TestCompletionEnterConfirmsSelection(t *testing.T) {
+	t.Run("enter with matches appends selected tag to formTags", func(t *testing.T) {
+		store := &mockStore{}
+		m := initialModel("default", store)
+		m.view = viewCreate
+		m.tagInput = "bu"
+		m.formTags = []string{}
+		m.completion.active = true
+		m.completion.matches = []string{"bug", "build"}
+		m.completion.index = 0
+		m.completion.target = "tag"
+		m.completion.input = "bu"
+
+		result, _ := m.Update(makeKey("enter"))
+		m = result.(Model)
+		if !contains(m.formTags, "bug") {
+			t.Error("expected bug to be added to formTags")
+		}
+		if m.completion.active {
+			t.Error("expected completion to be deactivated")
+		}
+		if m.tagInput != "" {
+			t.Errorf("expected tagInput to be cleared, got %q", m.tagInput)
+		}
+	})
+
+	t.Run("enter with no matches but non-empty tagInput adds tagInput as tag", func(t *testing.T) {
+		store := &mockStore{}
+		m := initialModel("default", store)
+		m.view = viewCreate
+		m.tagInput = "newtag"
+		m.formTags = []string{}
+		m.completion.active = true
+		m.completion.matches = []string{}
+		m.completion.target = "tag"
+
+		result, _ := m.Update(makeKey("enter"))
+		m = result.(Model)
+		if !contains(m.formTags, "newtag") {
+			t.Error("expected newtag to be added to formTags")
+		}
+	})
+
+	t.Run("enter in filter view sets tagFilter", func(t *testing.T) {
+		store := &mockStore{}
+		m := initialModel("default", store)
+		m.view = viewFilter
+		m.tagFilter = "bu"
+		m.completion.active = true
+		m.completion.matches = []string{"bug"}
+		m.completion.index = 0
+		m.completion.target = "filter"
+
+		result, _ := m.Update(makeKey("enter"))
+		m = result.(Model)
+		if m.tagFilter != "bug" {
+			t.Errorf("expected tagFilter 'bug', got %q", m.tagFilter)
+		}
+	})
+}
+
+func TestEnterInDetailDoesNotTriggerCreate(t *testing.T) {
+	t.Run("enter in detail view does nothing", func(t *testing.T) {
+		store := &mockStore{}
+		m := initialModel("default", store)
+		m.view = viewDetail
+		m.detailIssueID = "issue1"
+		m.issues["issue1"] = model.IssueFile{ID: "issue1", Title: "Test", Column: "col1"}
+
+		_, cmd := m.Update(makeKey("enter"))
+		if cmd != nil {
+			t.Error("expected no cmd")
+		}
+	})
+}
+
+func TestWriteErrorStateSet(t *testing.T) {
+	t.Run("writeErr is set on WriteCompleted error", func(t *testing.T) {
+		store := &mockStore{}
+		m := initialModel("default", store)
+		m.writing = true
+		m.pendingWrite = pendingIssueSave{
+			boardName: "default",
+			issue:     model.IssueFile{ID: "issue1"},
+			entries:   nil,
+		}
+
+		result, _ := m.Update(WriteCompleted{Err: errTest})
+		m = result.(Model)
+		if m.writeErr == nil {
+			t.Error("expected writeErr to be set")
+		}
+		if m.writing {
+			t.Error("expected writing to be false after WriteCompleted")
+		}
+	})
+}
+
 var _ = errTest // suppress unused warning
