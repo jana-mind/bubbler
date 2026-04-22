@@ -652,6 +652,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 					}
 					m.completion.active = false
 					m.tagInput = ""
+					return m, nil
 				}
 				return m, func() tea.Msg { return CreateSubmit{} }
 			case "esc", "c", "C":
@@ -714,6 +715,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 					}
 					m.completion.active = false
 					m.tagInput = ""
+					return m, nil
 				}
 				return m, func() tea.Msg { return EditSave{} }
 			case "esc", "c", "C":
