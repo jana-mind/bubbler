@@ -14,7 +14,7 @@ func newTuiCmd() *cobra.Command {
 		Use:   "tui",
 		Short: "Open the interactive kanban board",
 		RunE: func(cmd *cobra.Command, args []string) error {
-			boardName, _ := cmd.Flags().GetString("board")
+			boardName := boardFlag(cmd)
 
 			repoRoot, err := git.FindRepoRoot()
 			if err != nil {
@@ -32,6 +32,5 @@ func newTuiCmd() *cobra.Command {
 			return nil
 		},
 	}
-	cmd.Flags().StringP("board", "b", "default", "board name to open")
 	return cmd
 }
