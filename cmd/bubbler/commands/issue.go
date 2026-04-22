@@ -1,6 +1,7 @@
 package commands
 
 import (
+	"bufio"
 	"errors"
 	"fmt"
 	"os"
@@ -434,9 +435,12 @@ func runCreate(cmd *cobra.Command, opts *createOptions) error {
 
 func promptTitle() (string, error) {
 	fmt.Print("Title: ")
-	var title string
-	fmt.Scanln(&title)
-	return title, nil
+	reader := bufio.NewReader(os.Stdin)
+	title, err := reader.ReadString('\n')
+	if err != nil {
+		return "", err
+	}
+	return strings.TrimRight(title, "\r\n"), nil
 }
 
 func editWithEditor(content string) (string, error) {

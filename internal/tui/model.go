@@ -82,8 +82,8 @@ type Model struct {
 	formDescLines   []string
 	formDescEditing bool
 
-	tagFilter    string
-	tagInput     string
+	tagFilter string
+	tagInput  string
 
 	loading      bool
 	writing      bool

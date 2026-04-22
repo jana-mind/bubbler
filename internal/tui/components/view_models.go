@@ -39,7 +39,7 @@ type TUIEditModel struct {
 	FormDescLines []string
 	FormTags      []string
 	TagInput      string
-	Completion   CompletionViewModel
+	Completion    CompletionViewModel
 }
 
 type TUIFilterModel struct {
