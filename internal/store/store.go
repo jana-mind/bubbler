@@ -112,6 +112,29 @@ func DeleteIssueFile(issuePath, boardPath string, issueID string) error {
 	return nil
 }
 
+func DeleteBoardFileSubmodule(boardFile, issuesDir, boardName string) error {
+	bubblePath := filepath.Dir(boardFile)
+	repoRoot := filepath.Dir(bubblePath)
+	if git.IsSubmodule(repoRoot, bubblePath) {
+		if err := git.Pull(repoRoot, bubblePath); err != nil {
+			return fmt.Errorf("submodule pull: %w", err)
+		}
+	}
+	if err := os.Remove(boardFile); err != nil {
+		return fmt.Errorf("remove board file: %w", err)
+	}
+	if err := os.RemoveAll(issuesDir); err != nil {
+		return fmt.Errorf("remove issues directory: %w", err)
+	}
+	if git.IsSubmodule(repoRoot, bubblePath) {
+		msg := fmt.Sprintf("bubbler: delete board %s", boardName)
+		if err := git.CommitAndPush(repoRoot, bubblePath, msg); err != nil {
+			return fmt.Errorf("submodule commit/push: %w", err)
+		}
+	}
+	return nil
+}
+
 func commitMessageForBoard() string {
 	return "bubbler: update board"
 }

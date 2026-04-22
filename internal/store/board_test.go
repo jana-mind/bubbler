@@ -162,3 +162,52 @@ func TestSaveBoardFile(t *testing.T) {
 		}
 	})
 }
+
+func TestDeleteBoardFileSubmodule(t *testing.T) {
+	t.Run("deletes board file and issues directory", func(t *testing.T) {
+		tmp := t.TempDir()
+		bubblePath := filepath.Join(tmp, ".bubble")
+		boardFile := filepath.Join(bubblePath, "myboard.yaml")
+		issuesDir := filepath.Join(bubblePath, "myboard")
+
+		bf := model.BoardFile{
+			Board: model.Board{
+				Name: "myboard",
+				Columns: []model.Column{
+					{ID: "waiting", Label: "Waiting"},
+				},
+				Tags: []string{"bug"},
+			},
+		}
+
+		if err := os.MkdirAll(issuesDir, 0755); err != nil {
+			t.Fatal(err)
+		}
+		if err := SaveBoardFile(boardFile, bf); err != nil {
+			t.Fatal(err)
+		}
+
+		if err := DeleteBoardFileSubmodule(boardFile, issuesDir, "myboard"); err != nil {
+			t.Fatalf("expected no error, got %v", err)
+		}
+
+		if _, err := os.Stat(boardFile); !os.IsNotExist(err) {
+			t.Errorf("expected board file to be deleted, stat returned: %v", err)
+		}
+		if _, err := os.Stat(issuesDir); !os.IsNotExist(err) {
+			t.Errorf("expected issues directory to be deleted, stat returned: %v", err)
+		}
+	})
+
+	t.Run("missing board file returns error", func(t *testing.T) {
+		tmp := t.TempDir()
+		bubblePath := filepath.Join(tmp, ".bubble")
+		boardFile := filepath.Join(bubblePath, "nonexistent.yaml")
+		issuesDir := filepath.Join(bubblePath, "nonexistent")
+
+		err := DeleteBoardFileSubmodule(boardFile, issuesDir, "nonexistent")
+		if err == nil {
+			t.Error("expected error when board file does not exist")
+		}
+	})
+}

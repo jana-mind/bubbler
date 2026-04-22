@@ -103,7 +103,7 @@ func runBoardCreate(cmd *cobra.Command, args []string) error {
 	}
 
 	boardPath := filepath.Join(bubblePath, name+".yaml")
-	if err := store.SaveBoardFile(boardPath, modelBoardToBoardFile(b)); err != nil {
+	if err := store.SaveBoardFileSubmodule(boardPath, modelBoardToBoardFile(b)); err != nil {
 		os.RemoveAll(issuesDir)
 		return fmt.Errorf("save board file: %w", err)
 	}
@@ -153,11 +153,8 @@ func runBoardDelete(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("board %q has %d issue(s) and cannot be deleted", name, len(issues))
 	}
 
-	if err := os.Remove(boardFile); err != nil {
-		return fmt.Errorf("remove board file: %w", err)
-	}
-	if err := os.RemoveAll(issuesDir); err != nil {
-		return fmt.Errorf("remove issues directory: %w", err)
+	if err := store.DeleteBoardFileSubmodule(boardFile, issuesDir, name); err != nil {
+		return fmt.Errorf("delete board: %w", err)
 	}
 
 	return nil
