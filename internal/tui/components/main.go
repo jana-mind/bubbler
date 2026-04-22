@@ -15,6 +15,7 @@ type MainViewModel struct {
 	FormTags      []string
 	FormDescLines []string
 	TagFilter     string
+	TagInput      string
 	WriteErr      error
 	Loading       bool
 	BoardName     string
@@ -62,6 +63,7 @@ func RenderView(m MainViewModel) string {
 			FormTitle:  m.FormTitle,
 			FormColumn: m.FormColumn,
 			FormTags:   m.FormTags,
+			TagInput:   m.TagInput,
 			Completion: m.Completion,
 		})
 	case 3:
@@ -78,6 +80,7 @@ func RenderView(m MainViewModel) string {
 			FormTitle:     m.FormTitle,
 			FormDescLines: m.FormDescLines,
 			FormTags:      m.FormTags,
+			TagInput:      m.TagInput,
 			Completion:    m.Completion,
 		})
 	case 5:

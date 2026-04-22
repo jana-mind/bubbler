@@ -32,6 +32,12 @@ func RenderCreate(m TUICreateModel) string {
 	b.WriteString("Tags:     ")
 	b.WriteString(createFieldStyle.Render("["))
 	b.WriteString(strings.Join(m.FormTags, ", "))
+	if m.TagInput != "" {
+		if len(m.FormTags) > 0 {
+			b.WriteString(", ")
+		}
+		b.WriteString(createFieldStyle.Render(m.TagInput))
+	}
 	b.WriteString(createFieldStyle.Render("]"))
 	b.WriteString("\n")
 

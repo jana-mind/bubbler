@@ -82,7 +82,8 @@ type Model struct {
 	formDescLines   []string
 	formDescEditing bool
 
-	tagFilter string
+	tagFilter    string
+	tagInput     string
 
 	loading      bool
 	writing      bool
@@ -229,6 +230,15 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	case TagFilterApplied:
 		m.tagFilter = t.Tag
+		return m, nil
+
+	case TagInputChanged:
+		m.tagInput = t.Text
+		m.completion.active = true
+		m.completion.matches = matchTags(t.Text, m.board.Board.Tags)
+		m.completion.index = 0
+		m.completion.input = t.Text
+		m.completion.target = "tag"
 		return m, nil
 
 	case TagFilterCleared:
@@ -493,8 +503,13 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 					} else {
 						m.formTags = append(m.formTags, selected)
 					}
+				} else if m.completion.target == "tag" && m.tagInput != "" {
+					if !contains(m.formTags, m.tagInput) {
+						m.formTags = append(m.formTags, m.tagInput)
+					}
 				}
 				m.completion.active = false
+				m.tagInput = ""
 				return m, nil
 			case "tab", "down":
 				if len(m.completion.matches) > 0 {
@@ -511,6 +526,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				return m, nil
 			case "esc", "c", "C":
 				m.completion.active = false
+				m.tagInput = ""
 				return m, nil
 			}
 		}
@@ -562,6 +578,8 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				m.formTags = nil
 				m.formDescLines = nil
 				m.formDescEditing = false
+				m.tagInput = ""
+				m.completion.active = false
 				return m, nil
 			case "t", "T":
 				m.view = viewFilter
@@ -697,6 +715,15 @@ func issuesInColumn(colID string, issues []model.IssueSummary) []model.IssueSumm
 	return result
 }
 
+func contains(haystack []string, needle string) bool {
+	for _, s := range haystack {
+		if s == needle {
+			return true
+		}
+	}
+	return false
+}
+
 func tagSetsEqual(a, b []string) bool {
 	if len(a) != len(b) {
 		return false
@@ -778,6 +805,7 @@ func (m Model) View() tea.View {
 		FormTags:      m.formTags,
 		FormDescLines: m.formDescLines,
 		TagFilter:     m.tagFilter,
+		TagInput:      m.tagInput,
 		WriteErr:      m.writeErr,
 		Loading:       m.loading,
 		BoardName:     m.boardName,

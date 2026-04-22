@@ -42,6 +42,8 @@ type WriteRetryRequested struct{}
 type WriteCancelled struct{}
 type QuitConfirmed struct{}
 
+type TagInputChanged struct{ Text string }
+
 type TabPressed struct{}
 type TabCompletionResult struct{ Text string }
 
@@ -72,6 +74,7 @@ var _ tea.Msg = (WriteCompleted{})
 var _ tea.Msg = (WriteRetryRequested{})
 var _ tea.Msg = (WriteCancelled{})
 var _ tea.Msg = (QuitConfirmed{})
+var _ tea.Msg = (TagInputChanged{})
 var _ tea.Msg = (TabPressed{})
 var _ tea.Msg = (TabCompletionResult{})
 var _ tea.Msg = (CreateSubmit{})

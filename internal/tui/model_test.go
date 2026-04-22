@@ -618,4 +618,75 @@ func TestTabCompletion(t *testing.T) {
 	})
 }
 
+func TestTagInputChanged(t *testing.T) {
+	t.Run("TagInputChanged activates completion and sets tagInput", func(t *testing.T) {
+		store := &mockStore{}
+		m := initialModel("default", store)
+		m.view = viewCreate
+		m.board = model.BoardFile{
+			Board: model.Board{
+				Tags: []string{"bug", "feature", "chore"},
+				Columns: []model.Column{
+					{ID: "col1", Label: "Col 1"},
+				},
+			},
+		}
+
+		result, _ := m.Update(TagInputChanged{Text: "bu"})
+		m = result.(Model)
+		if !m.completion.active {
+			t.Error("expected completion.active to be true")
+		}
+		if m.tagInput != "bu" {
+			t.Errorf("expected tagInput 'bu', got %q", m.tagInput)
+		}
+		if len(m.completion.matches) != 1 || m.completion.matches[0] != "bug" {
+			t.Errorf("expected matches [bug], got %v", m.completion.matches)
+		}
+		if m.completion.target != "tag" {
+			t.Errorf("expected target 'tag', got %q", m.completion.target)
+		}
+	})
+
+	t.Run("TagInputChanged with no matching input shows empty matches", func(t *testing.T) {
+		store := &mockStore{}
+		m := initialModel("default", store)
+		m.view = viewCreate
+		m.board = model.BoardFile{
+			Board: model.Board{
+				Tags: []string{"bug", "feature", "chore"},
+			},
+		}
+
+		result, _ := m.Update(TagInputChanged{Text: "xyz"})
+		m = result.(Model)
+		if !m.completion.active {
+			t.Error("expected completion.active to be true")
+		}
+		if len(m.completion.matches) != 0 {
+			t.Errorf("expected no matches, got %d", len(m.completion.matches))
+		}
+	})
+}
+
+func TestContains(t *testing.T) {
+	t.Run("returns true when needle present", func(t *testing.T) {
+		if !contains([]string{"a", "b", "c"}, "b") {
+			t.Error("expected true")
+		}
+	})
+
+	t.Run("returns false when needle absent", func(t *testing.T) {
+		if contains([]string{"a", "b", "c"}, "d") {
+			t.Error("expected false")
+		}
+	})
+
+	t.Run("returns false for empty haystack", func(t *testing.T) {
+		if contains([]string{}, "a") {
+			t.Error("expected false")
+		}
+	})
+}
+
 var _ = errTest // suppress unused warning
