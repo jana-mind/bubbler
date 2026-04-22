@@ -38,3 +38,11 @@ func GetIdentityFromEnv() (Identity, error) {
 	}
 	return Identity{}, ErrNoIdentity
 }
+
+func GetIdentityFromRepoRoot() (Identity, error) {
+	repoRoot, err := FindRepoRoot()
+	if err != nil {
+		return Identity{}, ErrNoIdentity
+	}
+	return GetIdentity(repoRoot)
+}

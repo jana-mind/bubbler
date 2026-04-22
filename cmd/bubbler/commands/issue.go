@@ -46,54 +46,54 @@ func newIssueCmd() *cobra.Command {
 	return issueCmd
 }
 
-func getIssueIDs() ([]string, error) {
-	repoRoot, err := git.FindRepoRoot()
+func getIssueIDs(cmd *cobra.Command) ([]string, error) {
+	board := boardFlag(cmd)
+	boardPath, _, err := resolveBoardPaths(board)
 	if err != nil {
 		return nil, err
 	}
-	boardPath := filepath.Join(repoRoot, ".bubble", "default.yaml")
-	board, err := store.LoadBoardFileSubmodule(boardPath)
+	bf, err := store.LoadBoardFileSubmodule(boardPath)
 	if err != nil {
 		return nil, err
 	}
-	ids := make([]string, len(board.Issues))
-	for i, iss := range board.Issues {
+	ids := make([]string, len(bf.Issues))
+	for i, iss := range bf.Issues {
 		ids[i] = iss.ID
 	}
 	return ids, nil
 }
 
-func getColumnIDs() ([]string, error) {
-	repoRoot, err := git.FindRepoRoot()
+func getColumnIDs(cmd *cobra.Command) ([]string, error) {
+	board := boardFlag(cmd)
+	boardPath, _, err := resolveBoardPaths(board)
 	if err != nil {
 		return nil, err
 	}
-	boardPath := filepath.Join(repoRoot, ".bubble", "default.yaml")
-	board, err := store.LoadBoardFileSubmodule(boardPath)
+	bf, err := store.LoadBoardFileSubmodule(boardPath)
 	if err != nil {
 		return nil, err
 	}
-	return board.Board.ColumnIDs(), nil
+	return bf.Board.ColumnIDs(), nil
 }
 
-func getTagNames() ([]string, error) {
-	repoRoot, err := git.FindRepoRoot()
+func getTagNames(cmd *cobra.Command) ([]string, error) {
+	board := boardFlag(cmd)
+	boardPath, _, err := resolveBoardPaths(board)
 	if err != nil {
 		return nil, err
 	}
-	boardPath := filepath.Join(repoRoot, ".bubble", "default.yaml")
-	board, err := store.LoadBoardFileSubmodule(boardPath)
+	bf, err := store.LoadBoardFileSubmodule(boardPath)
 	if err != nil {
 		return nil, err
 	}
-	return board.Board.Tags, nil
+	return bf.Board.Tags, nil
 }
 
 func issueIDCompletion(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
 	if len(args) != 0 {
 		return nil, cobra.ShellCompDirectiveNoFileComp
 	}
-	ids, err := getIssueIDs()
+	ids, err := getIssueIDs(cmd)
 	if err != nil {
 		return nil, cobra.ShellCompDirectiveNoFileComp
 	}
@@ -101,7 +101,7 @@ func issueIDCompletion(cmd *cobra.Command, args []string, toComplete string) ([]
 }
 
 func columnFlagCompletion(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
-	ids, err := getColumnIDs()
+	ids, err := getColumnIDs(cmd)
 	if err != nil {
 		return nil, cobra.ShellCompDirectiveNoFileComp
 	}
@@ -109,7 +109,7 @@ func columnFlagCompletion(cmd *cobra.Command, args []string, toComplete string) 
 }
 
 func tagFlagCompletion(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
-	tags, err := getTagNames()
+	tags, err := getTagNames(cmd)
 	if err != nil {
 		return nil, cobra.ShellCompDirectiveNoFileComp
 	}
@@ -155,18 +155,18 @@ func newListCmd() *cobra.Command {
 }
 
 func runList(cmd *cobra.Command, opts *listOptions) error {
-	repoRoot, err := git.FindRepoRoot()
+	board := boardFlag(cmd)
+	boardPath, _, err := resolveBoardPaths(board)
 	if err != nil {
 		return err
 	}
 
-	boardPath := filepath.Join(repoRoot, ".bubble", "default.yaml")
-	board, err := store.LoadBoardFileSubmodule(boardPath)
+	bf, err := store.LoadBoardFileSubmodule(boardPath)
 	if err != nil {
 		return fmt.Errorf("load board: %w", err)
 	}
 
-	issues := board.Issues
+	issues := bf.Issues
 	if !opts.all {
 		var active []model.IssueSummary
 		for _, iss := range issues {
@@ -214,7 +214,7 @@ func runList(cmd *cobra.Command, opts *listOptions) error {
 		byColumn[iss.Column] = append(byColumn[iss.Column], iss)
 	}
 
-	for _, col := range board.Board.Columns {
+	for _, col := range bf.Board.Columns {
 		if issList, ok := byColumn[col.ID]; ok {
 			fmt.Printf("%s:\n", col.Label)
 			for _, iss := range issList {
@@ -254,12 +254,13 @@ func newShowCmd() *cobra.Command {
 }
 
 func runShow(cmd *cobra.Command, issueID string) error {
-	repoRoot, err := git.FindRepoRoot()
+	board := boardFlag(cmd)
+	_, issuesDir, err := resolveBoardPaths(board)
 	if err != nil {
 		return err
 	}
 
-	issuePath := filepath.Join(repoRoot, ".bubble", "default", issueID+".yaml")
+	issuePath := filepath.Join(issuesDir, issueID+".yaml")
 	issue, err := store.LoadIssueFileSubmodule(issuePath)
 	if err != nil {
 		return fmt.Errorf("load issue %q: %w", issueID, err)
@@ -316,13 +317,13 @@ func formatHistoryData(data model.HistoryData) {
 }
 
 func runCreate(cmd *cobra.Command, opts *createOptions) error {
-	repoRoot, err := git.FindRepoRoot()
+	board := boardFlag(cmd)
+	boardPath, issuesDir, err := resolveBoardPaths(board)
 	if err != nil {
 		return err
 	}
 
-	boardPath := filepath.Join(repoRoot, ".bubble", "default.yaml")
-	board, err := store.LoadBoardFileSubmodule(boardPath)
+	bf, err := store.LoadBoardFileSubmodule(boardPath)
 	if err != nil {
 		return fmt.Errorf("load board: %w", err)
 	}
@@ -340,16 +341,16 @@ func runCreate(cmd *cobra.Command, opts *createOptions) error {
 
 	column := opts.column
 	if column == "" {
-		if len(board.Board.Columns) == 0 {
+		if len(bf.Board.Columns) == 0 {
 			return errors.New("board has no columns")
 		}
-		column = board.Board.Columns[0].ID
+		column = bf.Board.Columns[0].ID
 	}
-	if !board.Board.HasColumn(column) {
+	if !bf.Board.HasColumn(column) {
 		return fmt.Errorf("%w: %q", errNoSuchColumn, column)
 	}
 
-	tagSet := board.Board.TagSet()
+	tagSet := bf.Board.TagSet()
 	for _, tag := range opts.tags {
 		if _, ok := tagSet[tag]; !ok {
 			return fmt.Errorf("%w: %q", errInvalidTag, tag)
@@ -366,22 +367,22 @@ func runCreate(cmd *cobra.Command, opts *createOptions) error {
 		}
 	}
 
-	identity, err := git.GetIdentity(repoRoot)
+	identity, err := git.GetIdentityFromRepoRoot()
 	if err != nil {
 		return err
 	}
 
-	if board.Board.NextID == 0 {
+	if bf.Board.NextID == 0 {
 		maxID := 0
-		for _, iss := range board.Issues {
+		for _, iss := range bf.Issues {
 			if n, err := strconv.Atoi(iss.ID); err == nil && n > maxID {
 				maxID = n
 			}
 		}
-		board.Board.NextID = maxID + 1
+		bf.Board.NextID = maxID + 1
 	}
 
-	issueID := board.Board.TakeNextID()
+	issueID := bf.Board.TakeNextID()
 
 	now := time.Now().UTC()
 
@@ -413,19 +414,19 @@ func runCreate(cmd *cobra.Command, opts *createOptions) error {
 		},
 	}
 
-	issuePath := filepath.Join(repoRoot, ".bubble", "default", issueID+".yaml")
+	issuePath := filepath.Join(issuesDir, issueID+".yaml")
 	if err := store.SaveIssueFileSubmodule(issuePath, issueFile, []model.HistoryEntry{createdEntry}); err != nil {
 		return fmt.Errorf("save issue file: %w", err)
 	}
 
-	board.Issues = append(board.Issues, model.IssueSummary{
+	bf.Issues = append(bf.Issues, model.IssueSummary{
 		ID:     issueID,
 		Title:  title,
 		Column: column,
 		Tags:   opts.tags,
 	})
 
-	if err := store.SaveBoardFileSubmodule(boardPath, board); err != nil {
+	if err := store.SaveBoardFileSubmodule(boardPath, bf); err != nil {
 		return fmt.Errorf("save board file: %w", err)
 	}
 
@@ -495,24 +496,24 @@ func newEditCmd() *cobra.Command {
 }
 
 func runEdit(cmd *cobra.Command, issueID, newTitle, newDesc string) error {
-	repoRoot, err := git.FindRepoRoot()
+	board := boardFlag(cmd)
+	boardPath, issuesDir, err := resolveBoardPaths(board)
 	if err != nil {
 		return err
 	}
 
-	issuePath := filepath.Join(repoRoot, ".bubble", "default", issueID+".yaml")
+	issuePath := filepath.Join(issuesDir, issueID+".yaml")
 	issue, err := store.LoadIssueFileSubmodule(issuePath)
 	if err != nil {
 		return fmt.Errorf("load issue %q: %w", issueID, err)
 	}
 
-	boardPath := filepath.Join(repoRoot, ".bubble", "default.yaml")
-	board, err := store.LoadBoardFileSubmodule(boardPath)
+	bf, err := store.LoadBoardFileSubmodule(boardPath)
 	if err != nil {
 		return fmt.Errorf("load board: %w", err)
 	}
 
-	identity, err := git.GetIdentity(repoRoot)
+	identity, err := git.GetIdentityFromRepoRoot()
 	if err != nil {
 		return err
 	}
@@ -546,9 +547,9 @@ func runEdit(cmd *cobra.Command, issueID, newTitle, newDesc string) error {
 	if hasTitle {
 		oldTitle := issue.Title
 		issue.Title = newTitle
-		for i := range board.Issues {
-			if board.Issues[i].ID == issueID {
-				board.Issues[i].Title = newTitle
+		for i := range bf.Issues {
+			if bf.Issues[i].ID == issueID {
+				bf.Issues[i].Title = newTitle
 				break
 			}
 		}
@@ -574,7 +575,7 @@ func runEdit(cmd *cobra.Command, issueID, newTitle, newDesc string) error {
 		return fmt.Errorf("save issue file: %w", err)
 	}
 	if hasTitle {
-		if err := store.SaveBoardFileSubmodule(boardPath, board); err != nil {
+		if err := store.SaveBoardFileSubmodule(boardPath, bf); err != nil {
 			return fmt.Errorf("save board file: %w", err)
 		}
 	}
@@ -593,22 +594,22 @@ func newMoveCmd() *cobra.Command {
 }
 
 func runMove(cmd *cobra.Command, args []string) error {
-	repoRoot, err := git.FindRepoRoot()
+	board := boardFlag(cmd)
+	boardPath, issuesDir, err := resolveBoardPaths(board)
 	if err != nil {
 		return err
 	}
 
 	issueID := args[0]
 
-	boardPath := filepath.Join(repoRoot, ".bubble", "default.yaml")
-	board, err := store.LoadBoardFileSubmodule(boardPath)
+	bf, err := store.LoadBoardFileSubmodule(boardPath)
 	if err != nil {
 		return fmt.Errorf("load board: %w", err)
 	}
 
 	if len(args) == 1 {
 		var cols []string
-		for _, c := range board.Board.Columns {
+		for _, c := range bf.Board.Columns {
 			cols = append(cols, fmt.Sprintf("%s (%s)", c.ID, c.Label))
 		}
 		return fmt.Errorf("Error: you need to define a column. Available columns are: %s", strings.Join(cols, ", "))
@@ -616,11 +617,11 @@ func runMove(cmd *cobra.Command, args []string) error {
 
 	targetCol := args[1]
 
-	if !board.Board.HasColumn(targetCol) {
+	if !bf.Board.HasColumn(targetCol) {
 		return fmt.Errorf("%w: %q", errNoSuchColumn, targetCol)
 	}
 
-	issuePath := filepath.Join(repoRoot, ".bubble", "default", issueID+".yaml")
+	issuePath := filepath.Join(issuesDir, issueID+".yaml")
 	issue, err := store.LoadIssueFileSubmodule(issuePath)
 	if err != nil {
 		return fmt.Errorf("load issue %q: %w", issueID, err)
@@ -631,7 +632,7 @@ func runMove(cmd *cobra.Command, args []string) error {
 		return nil
 	}
 
-	identity, err := git.GetIdentity(repoRoot)
+	identity, err := git.GetIdentityFromRepoRoot()
 	if err != nil {
 		return err
 	}
@@ -649,14 +650,14 @@ func runMove(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("save issue file: %w", err)
 	}
 
-	for i := range board.Issues {
-		if board.Issues[i].ID == issueID {
-			board.Issues[i].Column = targetCol
+	for i := range bf.Issues {
+		if bf.Issues[i].ID == issueID {
+			bf.Issues[i].Column = targetCol
 			break
 		}
 	}
 
-	if err := store.SaveBoardFileSubmodule(boardPath, board); err != nil {
+	if err := store.SaveBoardFileSubmodule(boardPath, bf); err != nil {
 		return fmt.Errorf("save board file: %w", err)
 	}
 
@@ -675,7 +676,8 @@ func newIssueTagCmd() *cobra.Command {
 }
 
 func runTag(cmd *cobra.Command, args []string) error {
-	repoRoot, err := git.FindRepoRoot()
+	board := boardFlag(cmd)
+	boardPath, issuesDir, err := resolveBoardPaths(board)
 	if err != nil {
 		return err
 	}
@@ -683,18 +685,17 @@ func runTag(cmd *cobra.Command, args []string) error {
 	issueID := args[0]
 	tagName := args[1]
 
-	boardPath := filepath.Join(repoRoot, ".bubble", "default.yaml")
-	board, err := store.LoadBoardFileSubmodule(boardPath)
+	bf, err := store.LoadBoardFileSubmodule(boardPath)
 	if err != nil {
 		return fmt.Errorf("load board: %w", err)
 	}
 
-	tagSet := board.Board.TagSet()
+	tagSet := bf.Board.TagSet()
 	if _, ok := tagSet[tagName]; !ok {
 		return fmt.Errorf("%w: %q", errInvalidTag, tagName)
 	}
 
-	issuePath := filepath.Join(repoRoot, ".bubble", "default", issueID+".yaml")
+	issuePath := filepath.Join(issuesDir, issueID+".yaml")
 	issue, err := store.LoadIssueFileSubmodule(issuePath)
 	if err != nil {
 		return fmt.Errorf("load issue %q: %w", issueID, err)
@@ -706,7 +707,7 @@ func runTag(cmd *cobra.Command, args []string) error {
 		}
 	}
 
-	identity, err := git.GetIdentity(repoRoot)
+	identity, err := git.GetIdentityFromRepoRoot()
 	if err != nil {
 		return err
 	}
@@ -724,14 +725,14 @@ func runTag(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("save issue file: %w", err)
 	}
 
-	for i := range board.Issues {
-		if board.Issues[i].ID == issueID {
-			board.Issues[i].Tags = append(board.Issues[i].Tags, tagName)
+	for i := range bf.Issues {
+		if bf.Issues[i].ID == issueID {
+			bf.Issues[i].Tags = append(bf.Issues[i].Tags, tagName)
 			break
 		}
 	}
 
-	if err := store.SaveBoardFileSubmodule(boardPath, board); err != nil {
+	if err := store.SaveBoardFileSubmodule(boardPath, bf); err != nil {
 		return fmt.Errorf("save board file: %w", err)
 	}
 
@@ -750,7 +751,8 @@ func newUntagCmd() *cobra.Command {
 }
 
 func runUntag(cmd *cobra.Command, args []string) error {
-	repoRoot, err := git.FindRepoRoot()
+	board := boardFlag(cmd)
+	boardPath, issuesDir, err := resolveBoardPaths(board)
 	if err != nil {
 		return err
 	}
@@ -758,13 +760,12 @@ func runUntag(cmd *cobra.Command, args []string) error {
 	issueID := args[0]
 	tagName := args[1]
 
-	boardPath := filepath.Join(repoRoot, ".bubble", "default.yaml")
-	board, err := store.LoadBoardFileSubmodule(boardPath)
+	bf, err := store.LoadBoardFileSubmodule(boardPath)
 	if err != nil {
 		return fmt.Errorf("load board: %w", err)
 	}
 
-	issuePath := filepath.Join(repoRoot, ".bubble", "default", issueID+".yaml")
+	issuePath := filepath.Join(issuesDir, issueID+".yaml")
 	issue, err := store.LoadIssueFileSubmodule(issuePath)
 	if err != nil {
 		return fmt.Errorf("load issue %q: %w", issueID, err)
@@ -781,7 +782,7 @@ func runUntag(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("issue %q does not have tag %q", issueID, tagName)
 	}
 
-	identity, err := git.GetIdentity(repoRoot)
+	identity, err := git.GetIdentityFromRepoRoot()
 	if err != nil {
 		return err
 	}
@@ -806,20 +807,20 @@ func runUntag(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("save issue file: %w", err)
 	}
 
-	for i := range board.Issues {
-		if board.Issues[i].ID == issueID {
+	for i := range bf.Issues {
+		if bf.Issues[i].ID == issueID {
 			var newBoardTags []string
-			for _, t := range board.Issues[i].Tags {
+			for _, t := range bf.Issues[i].Tags {
 				if t != tagName {
 					newBoardTags = append(newBoardTags, t)
 				}
 			}
-			board.Issues[i].Tags = newBoardTags
+			bf.Issues[i].Tags = newBoardTags
 			break
 		}
 	}
 
-	if err := store.SaveBoardFileSubmodule(boardPath, board); err != nil {
+	if err := store.SaveBoardFileSubmodule(boardPath, bf); err != nil {
 		return fmt.Errorf("save board file: %w", err)
 	}
 
@@ -840,12 +841,13 @@ func newCommentCmd() *cobra.Command {
 }
 
 func runComment(cmd *cobra.Command, issueID, message string) error {
-	repoRoot, err := git.FindRepoRoot()
+	board := boardFlag(cmd)
+	_, issuesDir, err := resolveBoardPaths(board)
 	if err != nil {
 		return err
 	}
 
-	issuePath := filepath.Join(repoRoot, ".bubble", "default", issueID+".yaml")
+	issuePath := filepath.Join(issuesDir, issueID+".yaml")
 	issue, err := store.LoadIssueFileSubmodule(issuePath)
 	if err != nil {
 		return fmt.Errorf("load issue %q: %w", issueID, err)
@@ -865,7 +867,7 @@ func runComment(cmd *cobra.Command, issueID, message string) error {
 		return nil
 	}
 
-	identity, err := git.GetIdentity(repoRoot)
+	identity, err := git.GetIdentityFromRepoRoot()
 	if err != nil {
 		return err
 	}
@@ -897,12 +899,13 @@ func newHistoryCmd() *cobra.Command {
 }
 
 func runHistory(cmd *cobra.Command, issueID string) error {
-	repoRoot, err := git.FindRepoRoot()
+	board := boardFlag(cmd)
+	_, issuesDir, err := resolveBoardPaths(board)
 	if err != nil {
 		return err
 	}
 
-	issuePath := filepath.Join(repoRoot, ".bubble", "default", issueID+".yaml")
+	issuePath := filepath.Join(issuesDir, issueID+".yaml")
 	issue, err := store.LoadIssueFileSubmodule(issuePath)
 	if err != nil {
 		return fmt.Errorf("load issue %q: %w", issueID, err)
