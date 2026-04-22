@@ -150,6 +150,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	case BoardLoadFailed:
 		m.loading = false
+		m.writeErr = t.Err
 		return m, nil
 
 	case IssueFocused:
@@ -246,14 +247,9 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return m, nil
 
 	case RefreshRequested:
-		board, err := m.store.LoadBoard(m.boardName)
-		if err != nil {
-			m.writeErr = err
-			return m, nil
-		}
-		m.board = board
 		m.issues = make(map[string]model.IssueFile)
-		return m, nil
+		m.loading = true
+		return m, cmdLoadBoard(m.boardName, m.store)
 
 	case tea.WindowSizeMsg:
 		m.width = t.Width

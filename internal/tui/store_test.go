@@ -79,6 +79,10 @@ func (s *errorStore) DeleteIssue(boardName, issueID string) error {
 	return s.deleteIssueErr
 }
 
+func (s *errorStore) RepoRoot() string {
+	return ""
+}
+
 func TestStoreErrors(t *testing.T) {
 	t.Run("LoadBoard error propagates", func(t *testing.T) {
 		s := &errorStore{loadBoardErr: errTest}
@@ -118,3 +122,88 @@ var errTest = errorStoreErr{}
 type errorStoreErr struct{}
 
 func (e errorStoreErr) Error() string { return "test error" }
+
+func TestErrorStoreWithModel(t *testing.T) {
+	t.Run("RefreshRequested sets loading and returns cmd for async load", func(t *testing.T) {
+		s := &errorStore{loadBoardErr: errTest}
+		m := initialModel("default", s)
+		m.loading = false
+
+		result, cmd := m.Update(RefreshRequested{})
+		m = result.(Model)
+		if !m.loading {
+			t.Error("expected loading to be true after RefreshRequested")
+		}
+		if cmd == nil {
+			t.Error("expected cmd to be returned for board reload")
+		}
+	})
+
+	t.Run("BoardLoadFailed clears loading and sets writeErr", func(t *testing.T) {
+		s := &errorStore{}
+		m := initialModel("default", s)
+		m.loading = true
+
+		result, _ := m.Update(BoardLoadFailed{Err: errTest})
+		m = result.(Model)
+		if m.loading {
+			t.Error("expected loading to be false after BoardLoadFailed")
+		}
+		if m.writeErr == nil {
+			t.Error("expected writeErr to be set")
+		}
+	})
+
+	t.Run("LoadIssue error does not panic and issue remains unloaded", func(t *testing.T) {
+		s := &errorStore{loadIssueErr: errTest}
+		m := initialModel("default", s)
+		m.view = viewDetail
+		m.detailIssueID = "issue1"
+		m.board = model.BoardFile{
+			Board: model.Board{
+				Columns: []model.Column{
+						{ID: "col1", Label: "Col 1"},
+					},
+					Tags: []string{},
+				},
+			}
+
+		m.issues["issue1"] = model.IssueFile{ID: "issue1", Title: "Test", Column: "col1"}
+		result, _ := m.Update(IssueFocused{IssueID: "issue1"})
+		m = result.(Model)
+		_, ok := m.issues["issue1"]
+		if !ok {
+			t.Error("expected issue1 to remain in issues map")
+		}
+	})
+}
+
+func TestMockStoreWithModel(t *testing.T) {
+	t.Run("RefreshRequested clears issues and sets loading", func(t *testing.T) {
+		s := &mockStore{}
+		m := initialModel("default", s)
+		m.board = model.BoardFile{Board: model.Board{Name: "old"}}
+
+		result, cmd := m.Update(RefreshRequested{})
+		m = result.(Model)
+		if cmd == nil {
+			t.Error("expected cmd for board reload")
+		}
+		if len(m.issues) != 0 {
+			t.Error("expected issues map to be cleared")
+		}
+		if !m.loading {
+			t.Error("expected loading to be true")
+		}
+
+		newBoard := model.BoardFile{Board: model.Board{Name: "new-name"}}
+		result, _ = m.Update(BoardLoaded{Board: newBoard})
+		m = result.(Model)
+		if m.board.Board.Name != "new-name" {
+			t.Errorf("expected board name 'new-name', got %q", m.board.Board.Name)
+		}
+		if m.loading {
+			t.Error("expected loading to be false")
+		}
+	})
+}

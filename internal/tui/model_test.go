@@ -222,18 +222,37 @@ func TestWriteCompletion(t *testing.T) {
 }
 
 func TestRefresh(t *testing.T) {
-	t.Run("RefreshRequested reloads board from store", func(t *testing.T) {
+	t.Run("RefreshRequested clears issues and returns cmd", func(t *testing.T) {
 		store := &mockStore{}
 		m := initialModel("default", store)
 		m.board = model.BoardFile{Board: model.Board{Name: "old"}}
 
-		result, _ := m.Update(RefreshRequested{})
+		result, cmd := m.Update(RefreshRequested{})
 		m = result.(Model)
-		if m.board.Board.Name != "" {
-			t.Errorf("expected board to be reloaded, got name %q", m.board.Board.Name)
+		if cmd == nil {
+			t.Error("expected cmd to be returned")
 		}
 		if len(m.issues) != 0 {
 			t.Error("expected issues map to be cleared")
+		}
+		if !m.loading {
+			t.Error("expected loading to be true")
+		}
+	})
+
+	t.Run("RefreshRequested on BoardLoaded restores new board", func(t *testing.T) {
+		store := &mockStore{}
+		m := initialModel("default", store)
+		m.loading = true
+
+		newBoard := model.BoardFile{Board: model.Board{Name: "new-name"}}
+		result, _ := m.Update(BoardLoaded{Board: newBoard})
+		m = result.(Model)
+		if m.board.Board.Name != "new-name" {
+			t.Errorf("expected board name 'new-name', got %q", m.board.Board.Name)
+		}
+		if m.loading {
+			t.Error("expected loading to be false")
 		}
 	})
 }
