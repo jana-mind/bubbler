@@ -826,6 +826,95 @@ func TestTabCompletion(t *testing.T) {
 	})
 }
 
+func makeCharKey(ch rune) tea.KeyMsg {
+	return tea.KeyPressMsg{Text: string(ch), Code: ch}
+}
+
+func TestKeystrokeActivatesCompletion(t *testing.T) {
+	tags := []string{"bug", "feature", "chore"}
+	columns := []model.Column{{ID: "col1", Label: "Col 1"}}
+
+	t.Run("character keystroke in create view activates completion and filters", func(t *testing.T) {
+		store := &mockStore{}
+		m := initialModel("default", store)
+		m.view = viewCreate
+		m.board = model.BoardFile{Board: model.Board{Tags: tags, Columns: columns}}
+
+		result, _ := m.Update(makeCharKey('b'))
+		m = result.(Model)
+		if !m.completion.active {
+			t.Error("expected completion.active to be true")
+		}
+		if m.tagInput != "b" {
+			t.Errorf("expected tagInput 'b', got %q", m.tagInput)
+		}
+		if len(m.completion.matches) != 1 || m.completion.matches[0] != "bug" {
+			t.Errorf("expected matches [bug], got %v", m.completion.matches)
+		}
+		if m.completion.target != "tag" {
+			t.Errorf("expected target 'tag', got %q", m.completion.target)
+		}
+	})
+
+	t.Run("character keystroke in edit view activates completion", func(t *testing.T) {
+		store := &mockStore{}
+		m := initialModel("default", store)
+		m.view = viewEdit
+		m.board = model.BoardFile{Board: model.Board{Tags: tags, Columns: columns}}
+
+		result, _ := m.Update(makeCharKey('f'))
+		m = result.(Model)
+		if !m.completion.active {
+			t.Error("expected completion.active to be true")
+		}
+		if m.tagInput != "f" {
+			t.Errorf("expected tagInput 'f', got %q", m.tagInput)
+		}
+		if len(m.completion.matches) != 1 || m.completion.matches[0] != "feature" {
+			t.Errorf("expected matches [feature], got %v", m.completion.matches)
+		}
+	})
+
+	t.Run("character keystroke in filter view activates completion", func(t *testing.T) {
+		store := &mockStore{}
+		m := initialModel("default", store)
+		m.view = viewFilter
+		m.board = model.BoardFile{Board: model.Board{Tags: tags, Columns: columns}}
+
+		result, _ := m.Update(makeCharKey('b'))
+		m = result.(Model)
+		if !m.completion.active {
+			t.Error("expected completion.active to be true")
+		}
+		if m.tagFilter != "b" {
+			t.Errorf("expected tagFilter 'b', got %q", m.tagFilter)
+		}
+		if len(m.completion.matches) != 1 || m.completion.matches[0] != "bug" {
+			t.Errorf("expected matches [bug], got %v", m.completion.matches)
+		}
+		if m.completion.target != "filter" {
+			t.Errorf("expected target 'filter', got %q", m.completion.target)
+		}
+	})
+
+	t.Run("character keystroke appends to existing tagInput", func(t *testing.T) {
+		store := &mockStore{}
+		m := initialModel("default", store)
+		m.view = viewCreate
+		m.tagInput = "b"
+		m.board = model.BoardFile{Board: model.Board{Tags: tags, Columns: columns}}
+
+		result, _ := m.Update(makeCharKey('u'))
+		m = result.(Model)
+		if m.tagInput != "bu" {
+			t.Errorf("expected tagInput 'bu', got %q", m.tagInput)
+		}
+		if len(m.completion.matches) != 1 || m.completion.matches[0] != "bug" {
+			t.Errorf("expected matches [bug], got %v", m.completion.matches)
+		}
+	})
+}
+
 func TestTagInputChanged(t *testing.T) {
 	t.Run("TagInputChanged activates completion and sets tagInput", func(t *testing.T) {
 		store := &mockStore{}

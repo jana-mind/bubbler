@@ -632,8 +632,27 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			}
 
 		case viewCreate:
+			if key := t.Key(); key.Text != "" {
+				m.tagInput += key.Text
+				m.completion.active = true
+				m.completion.matches = matchTags(m.tagInput, m.board.Board.Tags)
+				m.completion.index = 0
+				m.completion.input = m.tagInput
+				m.completion.target = "tag"
+				return m, nil
+			}
 			switch t.String() {
 			case "enter":
+				if m.completion.active {
+					if len(m.completion.matches) > 0 {
+						selected := m.completion.matches[m.completion.index]
+						m.formTags = append(m.formTags, selected)
+					} else if m.tagInput != "" && !contains(m.formTags, m.tagInput) {
+						m.formTags = append(m.formTags, m.tagInput)
+					}
+					m.completion.active = false
+					m.tagInput = ""
+				}
 				return m, func() tea.Msg { return CreateSubmit{} }
 			case "esc", "c", "C":
 				m.view = viewBoard
@@ -646,6 +665,11 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				return m, nil
 			case "down":
 				m.formColumn = (m.formColumn + 1) % len(m.board.Board.Columns)
+				return m, nil
+			case "tab":
+				if len(m.completion.matches) > 0 {
+					m.completion.index = (m.completion.index + 1) % len(m.completion.matches)
+				}
 				return m, nil
 			}
 
@@ -668,15 +692,50 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			}
 
 		case viewEdit:
+			if key := t.Key(); key.Text != "" {
+				m.tagInput += key.Text
+				m.completion.active = true
+				m.completion.matches = matchTags(m.tagInput, m.board.Board.Tags)
+				m.completion.index = 0
+				m.completion.input = m.tagInput
+				m.completion.target = "tag"
+				return m, nil
+			}
 			switch t.String() {
 			case "enter":
+				if m.completion.active {
+					if len(m.completion.matches) > 0 {
+						selected := m.completion.matches[m.completion.index]
+						if !contains(m.formTags, selected) {
+							m.formTags = append(m.formTags, selected)
+						}
+					} else if m.tagInput != "" && !contains(m.formTags, m.tagInput) {
+						m.formTags = append(m.formTags, m.tagInput)
+					}
+					m.completion.active = false
+					m.tagInput = ""
+				}
 				return m, func() tea.Msg { return EditSave{} }
 			case "esc", "c", "C":
 				m.view = viewDetail
 				return m, nil
+			case "tab":
+				if len(m.completion.matches) > 0 {
+					m.completion.index = (m.completion.index + 1) % len(m.completion.matches)
+				}
+				return m, nil
 			}
 
 		case viewFilter:
+			if key := t.Key(); key.Text != "" {
+				m.tagFilter += key.Text
+				m.completion.active = true
+				m.completion.matches = matchTags(m.tagFilter, m.board.Board.Tags)
+				m.completion.index = 0
+				m.completion.input = m.tagFilter
+				m.completion.target = "filter"
+				return m, nil
+			}
 			switch t.String() {
 			case "enter":
 				m.view = viewBoard
