@@ -243,6 +243,42 @@ func execCmd(t *testing.T, dir, name string, args ...string) {
 	}
 }
 
+func TestIsSubmodule_BubbleManualSkipsSubmoduleCheck(t *testing.T) {
+	tmp := t.TempDir()
+	parentDir := filepath.Join(tmp, "parent")
+	childDir := filepath.Join(tmp, "child")
+	bareDir := filepath.Join(tmp, "bare.git")
+	os.MkdirAll(parentDir, 0755)
+	os.MkdirAll(childDir, 0755)
+	os.MkdirAll(bareDir, 0755)
+
+	execCmd(t, parentDir, "git", "init")
+	execCmd(t, parentDir, "git", "config", "user.email", "test@test.com")
+	execCmd(t, parentDir, "git", "config", "user.name", "Test")
+	execCmd(t, childDir, "git", "init")
+	execCmd(t, childDir, "git", "config", "user.email", "test@test.com")
+	execCmd(t, childDir, "git", "config", "user.name", "Test")
+	execCmd(t, bareDir, "git", "init", "--bare")
+	execCmd(t, childDir, "git", "remote", "add", "origin", bareDir)
+	os.WriteFile(filepath.Join(childDir, "README"), []byte("init"), 0644)
+	execCmd(t, childDir, "git", "add", ".")
+	execCmd(t, childDir, "git", "commit", "-m", "init")
+	execCmd(t, childDir, "git", "push", "-u", "origin", "master")
+	execCmd(t, parentDir, "git", "submodule", "add", bareDir, ".bubble")
+	execCmd(t, parentDir, "git", "config", "user.email", "test@test.com")
+	execCmd(t, parentDir, "git", "commit", "-m", "add submodule")
+
+	bubblePath := filepath.Join(parentDir, ".bubble")
+	if !IsSubmodule(parentDir, bubblePath) {
+		t.Fatal("expected true before adding .bubble-manual")
+	}
+
+	os.WriteFile(filepath.Join(bubblePath, ".bubble-manual"), []byte(""), 0644)
+	if IsSubmodule(parentDir, bubblePath) {
+		t.Fatal("expected false after adding .bubble-manual")
+	}
+}
+
 func errorsIs(err, target error) bool {
 	return err == target
 }

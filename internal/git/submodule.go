@@ -16,10 +16,20 @@ var (
 )
 
 func IsSubmodule(repoRoot, bubblePath string) bool {
+	manualPath := filepath.Join(bubblePath, ".bubble-manual")
+	if _, err := os.Stat(manualPath); err == nil {
+		return false
+	}
+
 	modulesFile := filepath.Join(repoRoot, ".gitmodules")
 	data, err := os.ReadFile(modulesFile)
 	if err != nil {
 		return false
+	}
+	relPath, err := filepath.Rel(repoRoot, bubblePath)
+	comparePath := bubblePath
+	if err == nil {
+		comparePath = relPath
 	}
 	lines := strings.Split(string(data), "\n")
 	inSubmodule := false
@@ -27,9 +37,9 @@ func IsSubmodule(repoRoot, bubblePath string) bool {
 		line = strings.TrimSpace(line)
 		if strings.HasPrefix(line, "[submodule ") {
 			content := strings.Trim(line[11:], "\"]")
-			inSubmodule = content == bubblePath
+			inSubmodule = content == comparePath
 		} else if inSubmodule && strings.HasPrefix(line, "path = ") {
-			return strings.Trim(line[7:], " \"") == bubblePath
+			return strings.Trim(line[7:], " \"") == comparePath
 		}
 	}
 	return false
