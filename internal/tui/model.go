@@ -352,9 +352,10 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.completion.target = "filter"
 		} else if m.view == viewCreate || m.view == viewEdit {
 			m.completion.active = true
-			m.completion.matches = matchTags("", m.board.Board.Tags)
+			input := m.tagInput
+			m.completion.matches = matchTags(input, m.board.Board.Tags)
 			m.completion.index = 0
-			m.completion.input = ""
+			m.completion.input = input
 			m.completion.target = "tag"
 		}
 		return m, nil

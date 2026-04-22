@@ -427,6 +427,108 @@ func TestEditSave(t *testing.T) {
 			t.Error("expected no cmd")
 		}
 	})
+
+	t.Run("title change triggers write operation", func(t *testing.T) {
+		store := &mockStore{}
+		m := initialModel("default", store)
+		m.detailIssueID = "issue1"
+		m.formTitle = "New Title"
+		m.formDescLines = nil
+		m.formTags = nil
+		m.issues["issue1"] = model.IssueFile{
+			ID:          "issue1",
+			Title:       "Old Title",
+			Column:      "col1",
+			Description: "",
+			Tags:        nil,
+		}
+		m.board = model.BoardFile{
+			Board: model.Board{
+				Columns: []model.Column{
+					{ID: "col1", Label: "Col 1"},
+				},
+				Tags: []string{},
+			},
+		}
+
+		result, cmd := m.Update(EditSave{})
+		m = result.(Model)
+		if !m.writing {
+			t.Error("expected writing to be true")
+		}
+		if m.pendingWrite == nil {
+			t.Error("expected pendingWrite to be set")
+		}
+		if cmd == nil {
+			t.Error("expected cmd to be returned")
+		}
+	})
+
+	t.Run("description change triggers write operation", func(t *testing.T) {
+		store := &mockStore{}
+		m := initialModel("default", store)
+		m.detailIssueID = "issue1"
+		m.formTitle = "Test Issue"
+		m.formDescLines = []string{"new description"}
+		m.formTags = nil
+		m.issues["issue1"] = model.IssueFile{
+			ID:          "issue1",
+			Title:       "Test Issue",
+			Column:      "col1",
+			Description: "",
+			Tags:        nil,
+		}
+		m.board = model.BoardFile{
+			Board: model.Board{
+				Columns: []model.Column{
+					{ID: "col1", Label: "Col 1"},
+				},
+				Tags: []string{},
+			},
+		}
+
+		result, cmd := m.Update(EditSave{})
+		m = result.(Model)
+		if !m.writing {
+			t.Error("expected writing to be true")
+		}
+		if cmd == nil {
+			t.Error("expected cmd to be returned")
+		}
+	})
+
+	t.Run("tag change triggers write operation", func(t *testing.T) {
+		store := &mockStore{}
+		m := initialModel("default", store)
+		m.detailIssueID = "issue1"
+		m.formTitle = "Test Issue"
+		m.formDescLines = nil
+		m.formTags = []string{"bug", "urgent"}
+		m.issues["issue1"] = model.IssueFile{
+			ID:          "issue1",
+			Title:       "Test Issue",
+			Column:      "col1",
+			Description: "",
+			Tags:        []string{"bug"},
+		}
+		m.board = model.BoardFile{
+			Board: model.Board{
+				Columns: []model.Column{
+					{ID: "col1", Label: "Col 1"},
+				},
+				Tags: []string{"bug", "urgent"},
+			},
+		}
+
+		result, cmd := m.Update(EditSave{})
+		m = result.(Model)
+		if !m.writing {
+			t.Error("expected writing to be true")
+		}
+		if cmd == nil {
+			t.Error("expected cmd to be returned")
+		}
+	})
 }
 
 func TestFormChanges(t *testing.T) {
@@ -590,6 +692,93 @@ func TestTabCompletion(t *testing.T) {
 		}
 		if m.completion.index != 0 {
 			t.Errorf("expected index 0, got %d", m.completion.index)
+		}
+	})
+
+	t.Run("TabPressed in create view with no tagInput shows all tags", func(t *testing.T) {
+		store := &mockStore{}
+		m := initialModel("default", store)
+		m.view = viewCreate
+		m.tagInput = ""
+		m.board = model.BoardFile{
+			Board: model.Board{
+				Tags: []string{"bug", "feature", "chore"},
+				Columns: []model.Column{
+					{ID: "col1", Label: "Col 1"},
+				},
+			},
+		}
+
+		result, _ := m.Update(TabPressed{})
+		m = result.(Model)
+		if !m.completion.active {
+			t.Error("expected completion.active to be true")
+		}
+		if len(m.completion.matches) != 3 {
+			t.Errorf("expected 3 matches, got %d", len(m.completion.matches))
+		}
+		if m.completion.target != "tag" {
+			t.Errorf("expected target 'tag', got %q", m.completion.target)
+		}
+	})
+
+	t.Run("TabPressed in create view with tagInput filters matches", func(t *testing.T) {
+		store := &mockStore{}
+		m := initialModel("default", store)
+		m.view = viewCreate
+		m.tagInput = "bu"
+		m.board = model.BoardFile{
+			Board: model.Board{
+				Tags: []string{"bug", "feature", "chore"},
+				Columns: []model.Column{
+					{ID: "col1", Label: "Col 1"},
+				},
+			},
+		}
+
+		result, _ := m.Update(TabPressed{})
+		m = result.(Model)
+		if !m.completion.active {
+			t.Error("expected completion.active to be true")
+		}
+		if len(m.completion.matches) != 1 {
+			t.Errorf("expected 1 match, got %d", len(m.completion.matches))
+		}
+		if m.completion.matches[0] != "bug" {
+			t.Errorf("expected match 'bug', got %q", m.completion.matches[0])
+		}
+		if m.completion.input != "bu" {
+			t.Errorf("expected input 'bu', got %q", m.completion.input)
+		}
+		if m.completion.target != "tag" {
+			t.Errorf("expected target 'tag', got %q", m.completion.target)
+		}
+	})
+
+	t.Run("TabPressed in edit view with tagInput filters matches", func(t *testing.T) {
+		store := &mockStore{}
+		m := initialModel("default", store)
+		m.view = viewEdit
+		m.tagInput = "fea"
+		m.board = model.BoardFile{
+			Board: model.Board{
+				Tags: []string{"bug", "feature", "chore"},
+				Columns: []model.Column{
+					{ID: "col1", Label: "Col 1"},
+				},
+			},
+		}
+
+		result, _ := m.Update(TabPressed{})
+		m = result.(Model)
+		if !m.completion.active {
+			t.Error("expected completion.active to be true")
+		}
+		if len(m.completion.matches) != 1 {
+			t.Errorf("expected 1 match, got %d", len(m.completion.matches))
+		}
+		if m.completion.matches[0] != "feature" {
+			t.Errorf("expected match 'feature', got %q", m.completion.matches[0])
 		}
 	})
 
