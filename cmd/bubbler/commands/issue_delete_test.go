@@ -10,10 +10,10 @@ import (
 )
 
 func TestIssueDelete(t *testing.T) {
-	binPath := "/home/node/.openclaw/workspace/bubbler/bubbler"
+	binPath := filepath.Join(os.TempDir(), "bubbler_test_bin")
 	if _, err := os.Stat(binPath); os.IsNotExist(err) {
 		cmd := exec.Command("go", "build", "-o", binPath, ".")
-		cmd.Dir = "/home/node/.openclaw/workspace/bubbler"
+		cmd.Dir = os.TempDir()
 		if out, err := cmd.CombinedOutput(); err != nil {
 			t.Fatalf("build bubbler binary: %v\n%s", err, string(out))
 		}
