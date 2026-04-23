@@ -43,6 +43,7 @@ func newIssueCmd() *cobra.Command {
 	issueCmd.AddCommand(newUntagCmd())
 	issueCmd.AddCommand(newCommentCmd())
 	issueCmd.AddCommand(newHistoryCmd())
+	issueCmd.AddCommand(newIssueDeleteCmd())
 	return issueCmd
 }
 
@@ -884,6 +885,34 @@ func runComment(cmd *cobra.Command, issueID, message string) error {
 		return fmt.Errorf("save issue file: %w", err)
 	}
 
+	return nil
+}
+
+func newIssueDeleteCmd() *cobra.Command {
+	deleteCmd := &cobra.Command{
+		Use:               "delete <id>",
+		Short:             "Delete an issue",
+		Args:              cobra.ExactArgs(1),
+		RunE:              runIssueDelete,
+		ValidArgsFunction: issueIDCompletion,
+	}
+	return deleteCmd
+}
+
+func runIssueDelete(cmd *cobra.Command, args []string) error {
+	board := boardFlag(cmd)
+	boardPath, issuesDir, err := resolveBoardPaths(board)
+	if err != nil {
+		return err
+	}
+	issueID := args[0]
+	issuePath := filepath.Join(issuesDir, issueID+".yaml")
+	if _, err := store.LoadIssueFileSubmodule(issuePath); err != nil {
+		return fmt.Errorf("load issue %q: %w", issueID, err)
+	}
+	if err := store.DeleteIssueFile(issuePath, boardPath, issueID); err != nil {
+		return fmt.Errorf("delete issue: %w", err)
+	}
 	return nil
 }
 
