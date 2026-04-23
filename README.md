@@ -4,7 +4,7 @@
 
 Sand **bubbler** crabs are methodical. *They sit at their spot, pick up sand, extract what's useful, disregard the rest and set it aside.* bubbler strives to be like this, but for in-repo kanban boards. Simple, yet powerful: building big projects with simple boards that don't get in your way.
 
-(And also it is using bubbletea for it's optional TUI and bubbler worked quite well with that)
+(And also it is using bubbletea for it's highly WIP TUI and bubbler worked quite well with that)
 
 A kanban board for your terminal, living inside your git repo.
 
