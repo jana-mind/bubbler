@@ -93,21 +93,29 @@ func SaveIssueFileSubmodule(path string, issue model.IssueFile, entries []model.
 }
 
 func DeleteIssueFile(issuePath, boardPath string, issueID string) error {
-	if err := os.Remove(issuePath); err != nil {
-		return fmt.Errorf("remove issue file: %w", err)
-	}
 	bf, err := LoadBoardFile(boardPath)
 	if err != nil {
 		return fmt.Errorf("load board file: %w", err)
 	}
+	found := false
 	for i, issue := range bf.Issues {
 		if issue.ID == issueID {
 			bf.Issues = append(bf.Issues[:i], bf.Issues[i+1:]...)
+			found = true
+			if err := SaveBoardFile(boardPath, bf); err != nil {
+				return fmt.Errorf("save board file: %w", err)
+			}
 			break
 		}
 	}
-	if err := SaveBoardFile(boardPath, bf); err != nil {
-		return fmt.Errorf("save board file: %w", err)
+	if !found {
+		return fmt.Errorf("issue %q not found in board state", issueID)
+	}
+	if _, err := os.Stat(issuePath); os.IsNotExist(err) {
+		return nil
+	}
+	if err := os.Remove(issuePath); err != nil {
+		return fmt.Errorf("remove issue file: %w", err)
 	}
 	return nil
 }

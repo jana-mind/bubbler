@@ -342,6 +342,163 @@ func TestLoadBoardFileForUpdate(t *testing.T) {
 	})
 }
 
+func TestDeleteIssueFile(t *testing.T) {
+	t.Run("deletes issue file and removes from board", func(t *testing.T) {
+		tmp := t.TempDir()
+		bubblePath := filepath.Join(tmp, ".bubble")
+		boardPath := filepath.Join(bubblePath, "default.yaml")
+		issuesDir := filepath.Join(bubblePath, "default")
+
+		bf := model.BoardFile{
+			Board: model.Board{
+				Name: "default",
+				Columns: []model.Column{
+					{ID: "waiting", Label: "Waiting"},
+					{ID: "in-progress", Label: "In Progress"},
+				},
+				Tags: []string{"bug", "feature"},
+			},
+			Issues: []model.IssueSummary{
+				{ID: "abc123", Title: "Test Issue", Column: "waiting", Tags: []string{"bug"}},
+				{ID: "def456", Title: "Another Issue", Column: "in-progress", Tags: []string{"feature"}},
+			},
+		}
+
+		if err := os.MkdirAll(issuesDir, 0755); err != nil {
+			t.Fatal(err)
+		}
+		if err := SaveBoardFile(boardPath, bf); err != nil {
+			t.Fatal(err)
+		}
+
+		issuePath := filepath.Join(issuesDir, "abc123.yaml")
+		issueFile := model.IssueFile{
+			ID:          "abc123",
+			Title:       "Test Issue",
+			Column:      "waiting",
+			Tags:        []string{"bug"},
+			Description: "A test issue",
+		}
+		if err := model.SaveIssueFile(issuePath, issueFile, nil); err != nil {
+			t.Fatal(err)
+		}
+
+		if err := DeleteIssueFile(issuePath, boardPath, "abc123"); err != nil {
+			t.Fatalf("expected no error, got %v", err)
+		}
+
+		if _, err := os.Stat(issuePath); !os.IsNotExist(err) {
+			t.Errorf("expected issue file to be deleted, stat returned: %v", err)
+		}
+
+		reloaded, err := LoadBoardFile(boardPath)
+		if err != nil {
+			t.Fatalf("load board file: %v", err)
+		}
+		if len(reloaded.Issues) != 1 {
+			t.Errorf("expected 1 issue, got %d", len(reloaded.Issues))
+		}
+		if reloaded.Issues[0].ID != "def456" {
+			t.Errorf("expected remaining issue to be def456, got %q", reloaded.Issues[0].ID)
+		}
+	})
+
+	t.Run("fails for nonexistent issue file", func(t *testing.T) {
+		tmp := t.TempDir()
+		bubblePath := filepath.Join(tmp, ".bubble")
+		boardPath := filepath.Join(bubblePath, "default.yaml")
+		issuesDir := filepath.Join(bubblePath, "default")
+
+		bf := model.BoardFile{
+			Board: model.Board{
+				Name:    "default",
+				Columns: []model.Column{{ID: "waiting", Label: "Waiting"}},
+				Tags:    []string{"bug"},
+			},
+			Issues: nil,
+		}
+		if err := os.MkdirAll(issuesDir, 0755); err != nil {
+			t.Fatal(err)
+		}
+		if err := SaveBoardFile(boardPath, bf); err != nil {
+			t.Fatal(err)
+		}
+
+		err := DeleteIssueFile(filepath.Join(issuesDir, "nonexistent.yaml"), boardPath, "nonexistent")
+		if err == nil {
+			t.Error("expected error for nonexistent issue file")
+		}
+	})
+
+	t.Run("fails for nonexistent issue in board state", func(t *testing.T) {
+		tmp := t.TempDir()
+		bubblePath := filepath.Join(tmp, ".bubble")
+		boardPath := filepath.Join(bubblePath, "default.yaml")
+		issuesDir := filepath.Join(bubblePath, "default")
+
+		bf := model.BoardFile{
+			Board: model.Board{
+				Name:    "default",
+				Columns: []model.Column{{ID: "waiting", Label: "Waiting"}},
+				Tags:    []string{"bug"},
+			},
+			Issues: []model.IssueSummary{
+				{ID: "abc123", Title: "Existing Issue", Column: "waiting", Tags: nil},
+			},
+		}
+		if err := os.MkdirAll(issuesDir, 0755); err != nil {
+			t.Fatal(err)
+		}
+		if err := SaveBoardFile(boardPath, bf); err != nil {
+			t.Fatal(err)
+		}
+
+		issuePath := filepath.Join(issuesDir, "abc123.yaml")
+		issueFile := model.IssueFile{ID: "abc123", Title: "Existing Issue", Column: "waiting"}
+		if err := model.SaveIssueFile(issuePath, issueFile, nil); err != nil {
+			t.Fatal(err)
+		}
+
+		err := DeleteIssueFile(issuePath, boardPath, "nonexistent")
+		if err == nil {
+			t.Error("expected error for issue not in board state")
+		}
+	})
+
+	t.Run("fails when issue file exists but not in board state", func(t *testing.T) {
+		tmp := t.TempDir()
+		bubblePath := filepath.Join(tmp, ".bubble")
+		boardPath := filepath.Join(bubblePath, "default.yaml")
+		issuesDir := filepath.Join(bubblePath, "default")
+
+		bf := model.BoardFile{
+			Board: model.Board{
+				Name:    "default",
+				Columns: []model.Column{{ID: "waiting", Label: "Waiting"}},
+				Tags:    []string{"bug"},
+			},
+			Issues: nil,
+		}
+		if err := os.MkdirAll(issuesDir, 0755); err != nil {
+			t.Fatal(err)
+		}
+		if err := SaveBoardFile(boardPath, bf); err != nil {
+			t.Fatal(err)
+		}
+
+		issuePath := filepath.Join(issuesDir, "abc123.yaml")
+		issueFile := model.IssueFile{ID: "abc123", Title: "Test", Column: "waiting"}
+		if err := model.SaveIssueFile(issuePath, issueFile, nil); err != nil {
+			t.Fatal(err)
+		}
+
+		err := DeleteIssueFile(issuePath, boardPath, "abc123")
+		if err == nil {
+			t.Error("expected error when issue file exists but issue not in board state")
+		}
+	})
+}
+
 func TestSaveBoardFileForUpdate(t *testing.T) {
 	t.Run("saves and unlocks", func(t *testing.T) {
 		tmp := t.TempDir()
