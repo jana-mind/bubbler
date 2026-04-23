@@ -910,7 +910,7 @@ func runIssueDelete(cmd *cobra.Command, args []string) error {
 	if _, err := store.LoadIssueFileSubmodule(issuePath); err != nil {
 		return fmt.Errorf("load issue %q: %w", issueID, err)
 	}
-	if err := store.DeleteIssueFile(issuePath, boardPath, issueID); err != nil {
+	if err := store.DeleteIssueFileSubmodule(issuePath, boardPath, issueID); err != nil {
 		return fmt.Errorf("delete issue: %w", err)
 	}
 	return nil

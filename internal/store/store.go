@@ -93,29 +93,53 @@ func SaveIssueFileSubmodule(path string, issue model.IssueFile, entries []model.
 }
 
 func DeleteIssueFile(issuePath, boardPath string, issueID string) error {
-	bf, err := LoadBoardFile(boardPath)
+	return DeleteIssueFileSubmodule(issuePath, boardPath, issueID)
+}
+
+func DeleteIssueFileSubmodule(issuePath, boardPath string, issueID string) error {
+	bubblePath, repoRoot, err := bubbleAndRepoRoot(issuePath)
+	if err != nil {
+		return err
+	}
+	if git.IsSubmodule(repoRoot, bubblePath) {
+		if err := git.Pull(repoRoot, bubblePath); err != nil {
+			return fmt.Errorf("submodule pull: %w", err)
+		}
+	}
+
+	bf, lock, err := LoadBoardFileForUpdate(boardPath)
 	if err != nil {
 		return fmt.Errorf("load board file: %w", err)
 	}
+	defer lock.Unlock()
+
 	found := false
 	for i, issue := range bf.Issues {
 		if issue.ID == issueID {
 			bf.Issues = append(bf.Issues[:i], bf.Issues[i+1:]...)
 			found = true
-			if err := SaveBoardFile(boardPath, bf); err != nil {
-				return fmt.Errorf("save board file: %w", err)
-			}
 			break
 		}
 	}
 	if !found {
 		return fmt.Errorf("issue %q not found in board state", issueID)
 	}
+	if err := SaveBoardFileForUpdate(boardPath, bf, lock); err != nil {
+		return fmt.Errorf("save board file: %w", err)
+	}
+
 	if _, err := os.Stat(issuePath); os.IsNotExist(err) {
 		return nil
 	}
 	if err := os.Remove(issuePath); err != nil {
 		return fmt.Errorf("remove issue file: %w", err)
+	}
+
+	if git.IsSubmodule(repoRoot, bubblePath) {
+		msg := fmt.Sprintf("bubbler: delete issue %s", issueID)
+		if err := git.CommitAndPush(repoRoot, bubblePath, msg); err != nil {
+			return fmt.Errorf("submodule commit/push: %w", err)
+		}
 	}
 	return nil
 }
