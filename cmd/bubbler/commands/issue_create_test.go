@@ -49,8 +49,8 @@ issues: []
 
 	// Build bubbler binary to a temp location so tests are portable
 	bubblerBin := filepath.Join(tmpDir, "bubbler_test_bin")
-	buildCmd := exec.Command("go", "build", "-o", bubblerBin, ".")
-	buildCmd.Dir = filepath.Dir(filepath.Dir(filepath.Dir(filepath.Dir(filepath.FromSlash("../../.."))))) // repo root
+	buildCmd := exec.Command("go", "build", "-o", bubblerBin, "./cmd/bubbler")
+	buildCmd.Dir = "/home/node/.openclaw/workspace/bubbler"
 	if out, err := buildCmd.CombinedOutput(); err != nil {
 		t.Fatalf("failed to build bubbler: %v\n%s", err, out)
 	}

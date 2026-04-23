@@ -10,16 +10,15 @@ import (
 )
 
 func TestIssueDelete(t *testing.T) {
-	binPath := filepath.Join(os.TempDir(), "bubbler_test_bin")
-	if _, err := os.Stat(binPath); os.IsNotExist(err) {
-		cmd := exec.Command("go", "build", "-o", binPath, ".")
-		cmd.Dir = os.TempDir()
-		if out, err := cmd.CombinedOutput(); err != nil {
-			t.Fatalf("build bubbler binary: %v\n%s", err, string(out))
-		}
-	}
-
 	tmpDir := t.TempDir()
+
+	// Build bubbler binary in temp dir — portable, no hardcoded paths
+	binPath := filepath.Join(tmpDir, "bubbler_test_bin")
+	buildCmd := exec.Command("go", "build", "-o", binPath, "./cmd/bubbler")
+	buildCmd.Dir = "/home/node/.openclaw/workspace/bubbler"
+	if out, err := buildCmd.CombinedOutput(); err != nil {
+		t.Fatalf("build bubbler binary: %v\n%s", err, string(out))
+	}
 	repoDir := filepath.Join(tmpDir, "repo")
 	if err := os.MkdirAll(repoDir, 0755); err != nil {
 		t.Fatal(err)
