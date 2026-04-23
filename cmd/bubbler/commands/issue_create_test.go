@@ -47,9 +47,12 @@ issues: []
 		t.Fatal(err)
 	}
 
-	bubblerBin := "../../bubbler"
-	if _, err := os.Stat(bubblerBin); os.IsNotExist(err) {
-		bubblerBin = "/home/node/.openclaw/workspace/bubbler/bubbler"
+	// Build bubbler binary to a temp location so tests are portable
+	bubblerBin := filepath.Join(tmpDir, "bubbler_test_bin")
+	buildCmd := exec.Command("go", "build", "-o", bubblerBin, ".")
+	buildCmd.Dir = filepath.Dir(filepath.Dir(filepath.Dir(filepath.Dir(filepath.FromSlash("../../.."))))) // repo root
+	if out, err := buildCmd.CombinedOutput(); err != nil {
+		t.Fatalf("failed to build bubbler: %v\n%s", err, out)
 	}
 
 	t.Run("create with --title flag, Enter does not execute partial shell command", func(t *testing.T) {
